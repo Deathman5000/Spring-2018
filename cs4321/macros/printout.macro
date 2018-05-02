@@ -1,0 +1,104 @@
+       MACRO                                                            PRI00010
+&LABEL PRINTOUT &HEADER=YES                                             PRI00020
+.***************************************************************        PRI00030
+.* This macro lets you print register contents, areas of       *        PRI00040
+.* memory, and terminate execution. To print an area of memory,*        PRI00050
+.* specify its symbolic name.                                  *        PRI00060
+.*                                                             *        PRI00070
+.* Memory operands must be addressable                         *        PRI00080
+.*              by an S-type address constant to  be printed   *        PRI00090
+.* by this macro -- all such arguments must be addressable.    *        PRI00100
+.* There may be any number of arguments for each macro call.   *        PRI00110
+.* The printed output will contain the name of the item and    *        PRI00120
+.* the value of the named item. The output for each call may   *        PRI00130
+.* be preceded by a header message, which will be omitted if   *        PRI00140
+.* HEADER=NO is coded (after the last operand, usually).       *        PRI00150
+.*                                                             *        PRI00160
+.* To terminate execution of the program, code * as the last   *        PRI00170
+.* (or only) operand.                                          *        PRI00180
+.***************************************************************        PRI00190
+.* Format of parameter list:                                            PRI00200
+.*       DC    2F'0'              Save caller's R14/R15                 PRI00210
+.*       DC    V($$PRTOUT)                                              PRI00220
+.*       DC    AL1(flags),AL3(call_address)                             PRI00230
+.*       DC    A(call_statement_number)                                 PRI00240
+.*       operand-specific data                                          PRI00250
+         LCLA  &CNT,&LPCNT,&TCODE,&LENGTH,&A,&N                         PRI00260
+         LCLB  &BADOP             Missing/Ignored operand               PRI00270
+         LCLC  &HDRC              Uppercase HEADER operand              PRI00280
+.* &CNT is number of parameters; &LPCNT is loop counter;                PRI00290
+.* &TCODE is operand code,                                              PRI00300
+&N       SetA  &SYSSTMT           Calling statement number              PRI00310
+         LCLC  &T                 TYPE CODE OF PARAM.                   PRI00320
+&CNT     SETA  N'&SYSLIST         GET NO. OF ARGS.                      PRI00330
+$$PO&SYSNDX  DC   0H'0'           DECLARE INTERNAL LABEL                PRI00340
+         CNOP  2,4                ALIGNMENT                             PRI00350
+&LABEL   STM   14,15,*+10         SAVE REGS.                            PRI00360
+         L     15,*+14            ADDR PRINTOUT ROUTINE                 PRI00370
+         BALR  14,15              CALL ROUTINE                          PRI00380
+         DC    2F'0',V($$PRTOUT)  SAVE AREA, ADDR PRINTOUT              PRI00390
+&HDRC    SetC  Upper('&HEADER')   Upper case                            PRI00400
+         AIF   ('&HDRC' NE 'NO').NHDR                                   PRI00410
+&A       SETA  1                  INDICATE NO HEADER                    PRI00420
+.NHDR    AIF   (&CNT NE 0).SS1                                          PRI00430
+&A       SETA  &A+240             INDICATE NO PARMS                     PRI00440
+.SS1     DC    AL1(&A),AL3($$PO&SYSNDX),A(&N-1) PARAMETER FLAGS         PRI00450
+         AIF   (&CNT EQ 0).ENDLOOP EXIT IF NO PARMS                     PRI00460
+.PARMLP  AIF   (&CNT LE &LPCNT).ENDLOOP TEST IF LOOP COMPLETE           PRI00470
+&LPCNT   SETA  &LPCNT+1           INC. LOOP CNTR                        PRI00480
+&T       SETC  T'&SYSLIST(&LPCNT) TYPE CODE OF OPERAND                  PRI00490
+&TCODE   SETA  32                 HEX IS DEFAULT                        PRI00500
+&LENGTH  SETA  8                  DEFAULT LENGTH                        PRI00510
+         AIF   ('&SYSLIST(&LPCNT)' NE '*').SS4 BRANCH IF NOT *          PRI00520
+         DC    X'0800'            PRINTOUT *                            PRI00530
+         AGO   .GENIO             GENERATE I/O SECTION                  PRI00540
+.SS4     AIF   ('&T' EQ 'C').CHAR   BRANCH IF OPER. CHAR.               PRI00550
+         AIF   ('&T' EQ 'F' OR '&T' EQ 'H').DEC PRINT AS DEC            PRI00560
+         AIF   ('&T' EQ 'J' OR '&T' EQ 'M').LOK DEFAULT ATTR.           PRI00570
+         AIF   ('&T' EQ 'T' OR '&T' EQ 'U').LOK DEFAULT ATTR.           PRI00580
+         AIF   ('&T' EQ 'N').LOKN  DEFAULT ATTRIBUTES                   PRI00590
+         AIF   ('&T' NE 'O').GETLEN   GET LENGTH ATTRIB.                PRI00600
+         MNOTE *,'Omitted argument &LPCNT ignored.'                     PRI00610
+&BADOP   SETB  (1)                Indicate bad/missing operand          PRI00620
+         AGO   .PARMLP                                                  PRI00630
+.LOKN    ANOP                                                           PRI00640
+&A       SETA  &SYSLIST(&LPCNT)   GET VALUE OF ARGUMENT                 PRI00650
+         AIF   (&A LT 48).LOK     BRANCH IF VALID                       PRI00660
+         MNOTE *,'Operand &LPCNT ignored: value (&A) too big.'          PRI00670
+&BADOP   SETB  (1)                Indicate bad operand                  PRI00680
+         AGO   .PARMLP            SKIP THIS ARGUMENT                    PRI00690
+.DEC     ANOP                     F OR H CONSTANT                       PRI00700
+&TCODE   SETA  64                 PRINT AS DECIMAL HWORD                PRI00710
+         AIF   ('&T' EQ 'H').GETLEN   GET LENGTH ATTRIB HWORD           PRI00720
+&TCODE   SETA  65                 PRINT AS DECIMAL FWORD                PRI00730
+         AGO   .GETLEN            GET LENGTH ATTRIB.                    PRI00740
+.CHAR    ANOP                     CHARACTER STRING                      PRI00750
+&TCODE   SETA  16                 TYPE IS CHARACTER                     PRI00760
+.GETLEN  ANOP                                                           PRI00770
+&LENGTH  SETA  L'&SYSLIST(&LPCNT)  LENGTH ATTRIBUTE                     PRI00780
+.* Max length chosen so printed data will fit on one print line         PRI00790
+         AIF   (&LENGTH LE 50).LOK IF LENGTH < 50 O.K.                  PRI00800
+         AIF   (&LENGTH LE 100 AND '&T' EQ 'C').LOK CHAR, 100 OK.       PRI00810
+&LENGTH  SETA 100                 MAX LENGTH FOR CHAR STR               PRI00820
+         AIF   ('&T' EQ 'C').LOK                                        PRI00830
+&LENGTH  SETA 50                  MAX LENGTH FOR HEX STR                PRI00840
+.LOK     ANOP                                                           PRI00850
+         AIF   (&LPCNT NE &CNT).TCODEOK CHECK IF LAST OPERAND           PRI00860
+&TCODE   SETA  &TCODE+128         LAST OPERAND                          PRI00870
+.TCODEOK ANOP                                                           PRI00880
+&LENGTH  SETA  &LENGTH-1          USE LENGTH-1 AS PARM.                 PRI00890
+         DC    AL1(&TCODE),AL1(&LENGTH),S(&SYSLIST(&LPCNT))             PRI00900
+         DC    CL8'&SYSLIST(&LPCNT)'  8 Characters of print name        PRI00910
+&BADOP   SETB  (0)                Indicate OK operand                   PRI00920
+.* PARAMS TO PRINTOUT--TYPE,LENGTH-1,S(ADDRESS),PRINTNAME               PRI00930
+.* Type code: X'80' = last item    X'40' = decimal conversion           PRI00940
+.*            X'20' = hexadecimal  X'10' = character                    PRI00950
+.*            X'08' = Prtout *     X'01' = decimal fullword             PRI00960
+.*            All zero halfword means last operand was bad              PRI00970
+         AGO   .PARMLP            GET NEXT OPERAND                      PRI00980
+.ENDLOOP AIF  (NOT &BADOP).DOLM   Check bad last operand                PRI00990
+         DC   H'0'                Indicate null last operand            PRI01000
+.DOLM    LM   14,15,0(14)         RESTORE REGISTERS                     PRI01010
+.GENIO   $$GENIO                  GENERATE I/O SECT                     PRI01020
+         MEND                                                           PRI01030
+

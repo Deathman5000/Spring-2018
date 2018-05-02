@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layout_marginRight="10dp"
+    android:layout_marginLeft="10dp"
+    tools:context="com.example.jh949711.dowjonesaverage.DowJonesAverageActivity">
+
+    <ProgressBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_marginTop="15dp"
+        android:max="29"
+        android:id="@+id/progressBar"
+        android:visibility="invisible"
+        />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DJIA Average"
+        android:layout_marginTop="15dp"
+        android:textStyle="bold"
+        android:id="@+id/textView"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Compute"
+        android:layout_marginTop="15dp"
+        android:id="@+id/button"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/result"
+        android:layout_marginTop="15dp"
+        android:textStyle="bold"/>
+
+
+</LinearLayout>

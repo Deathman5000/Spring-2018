@@ -1,0 +1,28 @@
+****************************************************************
+*                                                              *
+*  A PROGRAM TO OUTPUT THE SUM FROM 1 TO N                     *
+*                                                              *
+****************************************************************
+         TITLE 'AUTHOR: JAMES HUND VERSION: 02/19/18'
+HW2   START 0            FIRST LINE OF THE PROGRAM AND LABEL SUM1
+         PRINT NOGEN        SUPRESS MACRO EXPANSION
+*        SAMPLE PROGRAM
+         BASR 15,0          ESTABLISH A BASE REGISTER AND
+         USING *,15         INFORM THE ASSEMBLER
+*
+BEGIN    L 2,SUM            LOAD GR2 CONTENT OF SUM
+         L 3,ZERO
+LOOP     A 3,SUM            ADDS THE VALUE FROM SUM INTO GR3
+         ST 3,TOTAL         STORES GR3 INTO TOTAL
+         S 2,ONE            SUBTRACT ONE FROM GR2 AND SAVE IN GR2
+         C 2,ZERO           COMPARES GR2 WITH ZERO
+         ST 2,SUM           STORES GR2 INTO SUM
+         BC B'0010',LOOP
+         PRINTOUT MYMSG,TOTAL,*,Header=NO ;DISPLAY TOTAL AND TERMINATE
+*
+SUM      DC F'100'
+TOTAL    DC F'0'
+ONE      DC F'1'
+ZERO     DC F'0'
+MYMSG    DC C'Sum is stored in the variable SUM and'
+         END HW2

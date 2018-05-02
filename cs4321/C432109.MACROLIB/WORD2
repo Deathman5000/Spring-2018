@@ -1,0 +1,66 @@
+****************************************************************
+*  THIS MACRO WILL TAKE IN WORDS AND FIND THE RATIO OF LETTERS *
+*  TO THE LENGTH OF THE WORD                                   *
+*  AUTHOR: JAMES HUND                                          *
+*  VERSION: 04/27/18                                           *
+****************************************************************
+         MACRO
+&LAB     WORD2 &R1
+&LAB     L 2,0(0,&R1)
+         L 7,24(0,&R1)
+         L 9,=F'0'
+         L 10,=F'0'
+LEN      IC 7,CARD(9)
+         C 7,=F'64'
+         BE FOUNDL
+         A 9,=F'1'
+         A 10,=F'1'
+         B LEN
+FOUNDL   XR 9,9
+         XR 14,14
+         XR 0,0
+         XR 13,13
+         XR 8,8
+LOOP1    IC 7,CARD(9)
+         IC 8,LETTERS(14)
+         CR 7,8
+         BE CHAR
+         A 14,=F'1'
+         A 13,=F'4'
+         B LOOP1
+CHAR     L 0,COUNT(13)
+         C 0,=F'0'
+         BE NEWCHAR
+         BNE OLDCHAR
+NEWCHAR  L 1,=F'1'
+         ST 1,COUNT(13)
+         A  9,=F'1'
+         CR 9,10
+         BE DONE
+         XR 14,14
+         XR 13,13
+         B  LOOP1
+OLDCHAR  A  9,=F'1'
+         XR 14,14
+         XR 13,13
+         CR 9,10
+         BE DONE
+         B  LOOP1
+DONE     XR 4,4
+         XR 1,1
+LOOP2    L 0,COUNT(4)
+         XR 2,2
+         AR 1,0
+         ST 2,COUNT(4)
+         C  4,=F'100'
+         BE MATH
+         A  4,=F'4'
+         B  LOOP2
+MATH     LR 4,1
+         XR 5,5
+         ST 10,WLEN
+         ST 1,WCOUNT
+         SRDL 10,32
+         DR 10,4
+         ST 11,WRATIO
+         MEND

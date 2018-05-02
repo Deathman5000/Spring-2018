@@ -1,0 +1,15 @@
+/* This program is edited in ISPF editor                                00010000
+   and the file will be copied to the                                   00020000
+   unix subsystem of z/os                                               00030000
+   copy command: cp "//'c332114.temp(hello)'" ./java/zos/temp           00040000
+   The program will be executed from UNIX shell                         00050000
+   author: James Hund                                                   00060000
+   version: 02/05/18                                                    00070000
+*/                                                                      00080000
+public class Hello{                                                     00090001
+                                                                        00100000
+   public static void main(String Ý¨ args){                             00110001
+      System.out.println("Hello from z/os");                            00120001
+   }                                                                    00130001
+}                                                                       00140001
+                                                                        00150002

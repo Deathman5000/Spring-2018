@@ -1,0 +1,99 @@
+Name:James Hund
+
+Date:03/05/2018
+
+   CS 3321-01 Exam 1 Part 2 Spring 2018
+Note: To submit this file for grading, save it as a text file named exam1.txt on your local machine is a folder such as CS3321. 
+   
+Logon to X3270 and complete your work as instructed and type your answer for the following in the space provided:   
+
+1. From the ISPF primary option menu panel switch to the SDSF panel. (type =sd on the Option command line and hit enter)
+   Give a one line answer for what gets displayed as output for each of the following command. 
+   (1) /d t
+	This command gives the local date and time. It will also give a response time in the UTC(coordinated Universal Time)
+  
+  
+
+   (2) /d a,l
+	This command seems to give the activities that are current. It also seems to give who is online and offline as well
+  
+  
+ 
+   (3) /d tcpip,,n,route
+	This command seems to give a Netsat report with the IP address, Gateway address, and ports for the local machine  
+   
+   
+  
+   (4) /d omvs, limits
+   This command gives the usage for the different processes. It includes the current usage, highest usage, and limit.
+
+	
+	
+	
+   (5) /d iplinfo                
+   Give the date when the most recent IPL occurred
+	Most recent IPL occurred on 02/26/2018 at 08:16:03. This command gives the current version of software.
+
+   
+   
+   
+2. Switch to the ISPF primary menu option. (hit the function key F3)
+   Enter the following on the Option command line:
+   TSO LISTCAT ENTRIES('C3321**'), where ** is the last two digits for your mainframe logon user-id 
+   
+   TSO LISTCAT ENTRIES('C3321**') ALL
+
+   TSO LISTCAT
+   
+   
+   From the commands entered, give the names of MCAT and UCAT that is used by the z/OS system that you log-on to.
+   Master catalog name:
+  	MASTERV
+  
+  
+   User catalog name: 
+	WTAMU
+   
+  
+3. Write a REXX program that will allow a user to enter a value for N and display the sum of all even numbers <= N and 
+   sum of all odd numbers <= N. 
+   Name your dataset as 'C3321**.REXX(EXAM1)', where ** is the last two digits of your mainframe log-on id
+   A sample display should be as given below: 
+    ENTER A NUMBER     
+    10                  
+    SUM OF ODDS IS 25 
+    SUM OF EVENS IS 30 
+   
+   (Copy and paste your code here. If your are using the ISPF editor, make sure your pasted code does not contain the line numbers)
+   
+/* REXX */
+/* THIS PROGRAM TAKES THE SUM OF ALL N EVENS AND THE SUM OF ALL N ODDS.
+   AUTHOR: JAMES HUND
+   VERSION: 03/05/18
+*/
+
+SAY 'ENTER A NUMBER'
+PULL N
+EVEN = 0
+ODD = 0
+
+IF N >= 0 THEN DO
+   COPY = N
+   DO WHILE COPY >= 0
+      IF COPY//2 = 0 THEN
+         EVEN = EVEN + COPY
+      IF COPY//2 = 1 THEN
+         ODD = ODD + COPY
+      COPY = COPY - 1
+   END
+   SAY 'THE EVEN SUM IS '||EVEN
+   SAY 'THE ODD SUM IS ' ||ODD
+END    
+   
+   
+   
+   
+   
+After completing the above activities, save your work locally as exam1.txt. 
+Log on to WTCLASS (using a browser), go to CS 3321->Lessons->Assignment Submission -> Exam 1 and upload exam1.txt  
+When you have submitted your saved work as exam1.txt on WTCLASS, your have completed the exam.    

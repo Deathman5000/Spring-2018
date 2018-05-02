@@ -1,0 +1,43 @@
+         Macro                                                          CON00010
+&L       CONVERTI  &R,&A,&ERR=,&STOP=                                   CON00020
+.***************************************************************        CON00030
+.* This macro converts a character string starting at the      *        CON00040
+.* address to a binary integer in the register operand. If the *        CON00050
+.* register operand is greater than 31, and if the number being*        CON00060
+.* scanned is too large, the ERR= exit is taken, and R1 is set *        CON00070
+.* to the address of the next character to be scanned. If an   *        CON00080
+.* invalid character is encountered, the STOP= exit is taken,  *        CON00090
+.* and R1 is set to the address of that character.             *        CON00100
+.*                                                             *        CON00110
+.* If either of these error occurs and no exit address is      *        CON00120
+.* provided, a message is issued and the program halts.        *        CON00130
+.*                                                             *        CON00140
+.* Generated parameter list:                                   *        CON00150
+.*       DC    2F'0'              For caller's R14,R15         *        CON00160
+.*       DC    AL1(Flag),VL3($$CNVRTI)                         *        CON00170
+.*       DC    S(register),S(memory_address)                   *        CON00180
+.*       BC    0,&ERR+0   if register or number is invalid     *        CON00190
+.*       BC    0,&STOP+0  if an invalid character is found     *        CON00200
+.* These two BCs are not generated if no keywords are present. *        CON00210
+.***************************************************************        CON00220
+         LCLA  &F                                                       CON00230
+         AIF   (N'&SysList eq 2).A                                      CON00240
+         MNote 8,'CONVERTI: 2 operands required'                        CON00250
+         MExit ,                                                        CON00260
+.A       ANop  ,                                                        CON00270
+&L       CNop  2,4                                                      CON00280
+         STM   14,15,*+10                                               CON00290
+         L     15,*+14                                                  CON00300
+         BALR  14,15                                                    CON00310
+         AIF   ('&ERR' eq '').B                                         CON00320
+&F       SetA  1                                                        CON00330
+.B       AIF   ('&STOP' eq '').GenData                                  CON00340
+&F       SetA  &F+2                                                     CON00350
+.GenData DC    2F'0',AL1(&F),VL3($$CNVRTI),S(&R),S(&A)                  CON00360
+         LM    14,15,0(14)                                              CON00370
+         AIF   (NOT &F).GenIO                                           CON00380
+         BC    0,&ERR+0           Error in register or number           CON00390
+         BC    0,&STOP+0          Invalid character found in scan       CON00400
+.GenIO   $$GENIO                                                        CON00410
+         MEnd                                                           CON00420
+

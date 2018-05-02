@@ -1,0 +1,37 @@
+         MACRO
+&LAB     LAB9SUB &R1
+&LAB     L  5,0(0,&R1)
+         L  9,4(0,&R1)
+         L  13,8(0,&R1)
+         C  13,=F'78'
+         BE ADD
+         C  13,=F'92'
+         BE MULT
+         C  13,=F'96'
+         BE SUB
+         C  13,=F'97'
+         BE DIV
+         B  MOD
+ADD      AR 5,9
+         B  DONE
+SUB      SR 5,9
+         B  DONE
+MULT     XR 2,2
+         LR 3,5
+         MR 2,9
+         LR 5,3
+         B  DONE
+DIV      XR 3,3
+         LR 2,5
+         SRDL 2,32
+         DR 2,9
+         LR 5,3
+         B  DONE
+MOD      XR 3,3
+         LR 2,5
+         SRDL 2,32
+         DR 2,9
+         LR 5,2
+         B  DONE
+DONE    ST 5,12(0,&R1)
+         MEND

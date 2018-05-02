@@ -1,0 +1,808 @@
+         MACRO                                                          $$G00010
+         $$GENIO                                                        $$G00020
+.* The following local set symbols determine various options            $$G00030
+.* for the generated control section.                                   $$G00040
+         GBLB  &$$IOFLG           1 IF IOSECT GENERATED                 $$G00050
+         LCLA  &$$PLL             PRINT LINE LEN, .GE. 121              $$G00060
+         LCLB  &$$DOS             SET TO 1 IF SYSTEM=DOS                $$G00070
+&$$DOS   SETB  0                  SYSTEM IS OS/360 et seq.              $$G00080
+         LCLB  &$$LIBIO           1 IF IOSECT is in a library.          $$G00090
+&$$LIBIO SetB  0                  Generate IOSect inline if 0,          $$G00100
+.*       else generated code is in a runtime library if 1               $$G00110
+         LCLC  &$$INAM            INPUT DDNAME                          $$G00120
+         LCLC  &$$ONAM            OUTPUT DDNAME                         $$G00130
+         LCLC  &$$CSNam,&$$CSTyp  Caller's CSect name and type          $$G00140
+.*                                                                      $$G00150
+         AIF   (&$$IOFLG).MExit   Exit if not required                  $$G00160
+&$$CSNam SetC  '&SYSECT'          Save caller's CSect name              $$G00170
+&$$CSTyp SetC  '&SYSSTYP'         Save caller's CSect type              $$G00180
+&$$IOFLG SetB  1                  Set expansion not needed flag         $$G00190
+         AIF   (Not &$$LIBIO).Gen If not in library, gen                $$G00200
+.MExit   MExit                                                          $$G00210
+.***************************************************************        $$G00220
+.* This macro generates the code which implements the READCARD,*        $$G00230
+.* PRINTLIN, DUMPOUT, and PRINTOUT macros. the OS version was  *        $$G00240
+.* implemented by James R. Low, and modified for DOS by Paul M.*        $$G00250
+.* Dantzig, students at Stanford University. Later additions   *        $$G00260
+.* by John Ehrman.                                             *        $$G00270
+.***************************************************************        $$G00280
+.* Register usage: R13 = local base                            *        $$G00290
+.* R14,R15,R0,R1 = scratch and OS linkage                      *        $$G00300
+.* R7  = local link register, R12 = call type                  *        $$G00310
+.* R11 = parm ptr, retaddr, R10 = parm ptr(original R14)       *        $$G00320
+.* R9  = data length, R2,R3,R4,R8 = work registers             *        $$G00330
+.***************************************************************        $$G00340
+.Gen     Push  Print              Save PRINT status                     $$G00350
+         Print OFF                Suppress this stuff                   $$G00360
+&$$IOFLG SETB  1                  Set flag for $$GENIO generated        $$G00370
+.* SET OPTIONAL VALUES                                                  $$G00380
+&$$PLL   SETA  121                LINE LENGTH = 121                     $$G00390
+.* If the line length defined above is changed from 121 to 133,         $$G00400
+.* remember to make the corresponding changes in the PRINTLIN           $$G00410
+.* macro definition.                                                    $$G00420
+         AIF   (&$$DOS).OSNAME    GO DO DOS FILENAMES                   $$G00430
+&$$INAM  SETC  'SYSIN'            INPUT DDNAME                          $$G00440
+&$$ONAM  SETC  'SYSPRINT'         OUTPUT DDNAME                         $$G00450
+         AGO   .CSECT             GO GENERATE CSECTNAME                 $$G00460
+.OSNAME  ANOP                                                           $$G00470
+&$$ONAM  SETC  'SYSLST'           DOS DEFAULT OUTPUT FILE               $$G00480
+&$$INAM  SETC  'SYSIPT'           DOS DEFAULT INPUT FILE                $$G00490
+.CSECT   ANOP                                                           $$G00500
+$$IOSECT CSECT                                                          $$G00510
+$$IOSECT AMode 24                                                       $$G00520
+$$IOSECT RMode 24                                                       $$G00530
+         ENTRY $$READCD,$$PRTLIN,$$PRTOUT,$$DMPOUT                      $$G00540
+         ENTRY $$CNVRTO,$$CNVRTI                                        $$G00550
+.*                                                                      $$G00560
+$$DMPOUT STM   0,15,$$REGS-*(15)  SAVE REGS. R15 AS BASE                $$G00570
+         MVI   $$FLGS-*+4(15),1   INDICATE DUMPOUT CALL                 $$G00580
+         LA    12,8               CODE FOR DUMP/PRINTOUT                $$G00590
+         J     $$LOAD13           BRANCH TO COMMON CODE                 $$G00600
+.*                                                                      $$G00610
+$$PRTLIN STM   0,15,$$REGS-*(15)  SAVE REGS. R15 AS BASE                $$G00620
+         LA    12,4               CODE INDICATES PRINTLIN               $$G00630
+         J     $$LOAD13           BRANCH TO COMMON CODE                 $$G00640
+.*                                                                      $$G00650
+$$PRTOUT STM   0,15,$$REGS-*(15)  SAVE REGS.                            $$G00660
+         MVI   $$FLGS-*+4(15),0   INDICATE PRINTOUT                     $$G00670
+         LA    12,8               CODE FOR DUMP/PRINTOUT                $$G00680
+         J     $$LOAD13           BRANCH TO COMMON CODE                 $$G00690
+.*                                                                      $$G00700
+$$CNVRTO STM   0,15,$$REGS-*(15)  SAVE REGS.                            $$G00710
+         LA    12,12              CODE FOR CONVERTO                     $$G00720
+         J     $$LOAD13           BRANCH TO COMMON CODE                 $$G00730
+.*                                                                      $$G00740
+$$CNVRTI STM   0,15,$$REGS-*(15)  SAVE REGS.                            $$G00750
+         LA    12,16              CODE FOR CONVERTI                     $$G00760
+         J     $$LOAD13           BRANCH TO COMMON CODE                 $$G00770
+.*                                                                      $$G00780
+$$READCD STM   0,15,$$REGS-*(15)  SAVE REGS. R15 AS BASE                $$G00790
+         SR    12,12              CODE INDICATES READ                   $$G00800
+.*                                                                      $$G00810
+* $$LOAD13 BALR  13,0               LOAD BASE REGISTER                  $$G00820
+.*       USING *,13               ADDRESSABILITY IMPLIED                $$G00830
+         CNOP  0,4                ALIGNMENT                             $$G00840
+$$LOAD13 JAS   13,$$MOVE          SET BASE REG, JUMP DATA               $$G00850
+.* The following USING statement, although a comment, is implied        $$G00860
+.* throughout the code generated here. By using absolute                $$G00870
+.* displacements (calculated relative to $$, whose address is in        $$G00880
+.* R13), we can avoid having to issue another using statement           $$G00890
+.* anywhere in the code generated for the I/O package, and              $$G00900
+.* therefore the user can call these macros with assurance that         $$G00910
+.* there will be no adverse effects on his code, no matter how          $$G00920
+.* tortured it may be. Note that we go to great lengths to              $$G00930
+.* avoid the generation of literals, also.                              $$G00940
+*        USING $$,13              IS ASSUMED                            $$G00950
+.*       USING *,13               ADDRESSABILITY IMPLIED                $$G00960
+$$       EQU   *                  SET BASE FOR R13                      $$G00970
+         AIF   (&$$DOS).REGS      NO SAVE AREA FOR DOS                  $$G00980
+         DC    18F'0'             OS SAVE AREA                          $$G00990
+.REGS    ANOP                                                           $$G01000
+$$REGS   DC    16F'0'             LOCAL SAVE AREA for user's regs       $$G01010
+$$FFF    DC    A(X'FFFFFF')       MASK USED FOR EFF ADDR                $$G01020
+$$F000   DC    A(X'F000')         MASK TO GET BASE REG.                 $$G01030
+$$ACALL  DC    F'0'               Calling address                       $$G01040
+         AIF   (&$$DOS).NUMC      SKIP DCB EXIT IF DOS                  $$G01050
+.* DCB EXIT SETS BLKSIZE TO LRECL IF NOT SPECIFIED OTHERWISE            $$G01060
+$$DCBXIT DC    X'85',AL3(*+3)     DCB EXIT POINTER                      $$G01070
+         OC    62(2,1),62(1)      CHECK DCBBLKSIZ                       $$G01080
+         BCR   7,14               RETURN IF NOT ZERO                    $$G01090
+         MVC   62(2,1),82(1)      ELSE SET TO LRECL                     $$G01100
+         BR    14                 COMPLETE OPEN                         $$G01110
+.NUMC    ANOP                                                           $$G01120
+$$15     DC    H'15'              USED TO SEE IF GPR                    $$G01130
+$$31     DC    H'31'              USED TO SEE IF GGR                    $$G01140
+$$47     DC    H'47'              USED TO SEE IF FPR                    $$G01150
+$$CVIASt DS    F                  Digit string start address            $$G01160
+$$CVIAEn DS    F                  Digit string end+1 address            $$G01170
+$$RDATA  DC    D'0'               For reg conversion subroutines        $$G01180
+$$SAVG0  DC    D'0'               To save GGR0 temporarily              $$G01190
+$$DWORD  DC   2D'0'               USED FOR CVD,FLPTR,UNPK,CVDG          $$G01200
+         DC    X'0'               USED FOR UNPK INTO HEX                $$G01210
+$$CVIM32 DC    P'2147483648'      Maximum 32-bit binary magnitude       $$G01220
+$$CVIM64 DC    P'9223372036854775808' Max 64-bit binary magnitude       $$G01230
+$$XTemp  DS    XL4                For packing high-order digits         $$G01240
+$$FLG2   DC    X'00'              Temp save for no-header bit           $$G01250
+$$FLGS   DC    X'00'              PRINTOUT PARAM FLGS.                  $$G01260
+$$CVIFlg DC    X'00'    80=signed; 40=+; 20=-, 01=ERR exit              $$G01270
+.* ALSO USED TO INDICATE DUMPOUT/PRINTOUT CALL                          $$G01280
+$$CC     DC    C', CC='           FOR PRINTOUT HEADING                  $$G01290
+$$CCV    DC    C'0'               CC VALUE                              $$G01300
+$$ST     DC    C', Statement'     Statement number text                 $$G01310
+$$GPR    DC    C'GPR'             FOR REGISTER PRINTOUT                 $$G01320
+$$PC     DC    C'*** PRINTOUT requested at Address'  MESSAGE            $$G01330
+$$DC     DC    C' DUMP'           OVERLAY FOR ABOVE MSG                 $$G01340
+$$XQUOTE DC    C'= X'''           FOR PRINTING HEX DATA                 $$G01350
+$$CVIMC  DC    C'CONVERTI: Invalid character encountered'               $$G01360
+$$CVIMN  DC    C'CONVERTI: Invalid register or number too large'        $$G01370
+$$EX     DC    C'*** Execution terminated by' TERMINATION MSG           $$G01380
+$$REOF   DC    C'Reader EOF'      READCARD EOF TERMINATION              $$G01390
+$$PEND   DC    C'PRINTOUT *'      PRINTOUT * TERMINATION                $$G01400
+$$ATLOC  DC    C'at Address'      Where it happened                     $$G01410
+$$LOCP   Equ   L'$$EX+L'$$PEND+3  Offset for 'AT LOCATION'              $$G01420
+         DC    C' '               USED TO CLEAR LINE BUFF               $$G01430
+$$OUTBUF DC    CL&$$PLL' '        LINE BUFFER                           $$G01440
+$$PAT1   DC    X'40202120'        PATTERN TO PRINT Reg #                $$G01450
+$$PAT2   DC    X'402020202020202020202120' PATTERN TO PRINT DEC.        $$G01460
+$$PAT3   DC    0XL21'0',2X'40',17X'20',X'2120' Pattern for GGR          $$G01470
+$$PAT4   DC    X'402020202120'    Pattern for statement number          $$G01480
+$$DUMPTB DC    64C'.',C' ',9C'.',C'¢.<(+|&&',10C'.',C'$*);^-/'          $$G01490
+         DC    9C'.',C',%_>?',10C'.',C':#@''=".abcdefghi',7C'.'         $$G01500
+         DC    C'jklmnopqr',8C'.',C'stuvwxyz',23C'.',C'ABCDEFGHI'       $$G01510
+         DC    7C'.',C'JKLMNOPQR',8C'.',C'STUVWXYZ',6C'.'               $$G01520
+         DC    C'0123456789',6C'.'                                      $$G01530
+$$TRTAB  DC    C'0123456789ABCDEF' Hex translation taboel               $$G01540
+$$CVITbl DS    0XL256             Input conversion translate table      $$G01550
+*        Codes: hex 4=Invalid, 8=blank, C=+, 10=-, 14=digit             $$G01560
+         DC    (C' ')X'04'        Invalid chars                         $$G01570
+         DC    XL1'8'             Blank                                 $$G01580
+         DC    (C'+'-C' '-1)X'04' X'41'-X'4D' invalid                   $$G01590
+         DC    XL1'C'             +                                     $$G01600
+         DC    (C'-'-C'+'-1)X'04' X'4F'-X'5F' invalid                   $$G01610
+         DC    XL1'10'            -                                     $$G01620
+         DC    (C'0'-C'-'-1)X'04' X'61'-X'EF' invalid                   $$G01630
+         DC    10X'14'            Digits                                $$G01640
+         DC    6X'4'              Invalid                               $$G01650
+$$RCVT   DC    XL(L'$$PAT3)'0'                                          $$G01660
+$$FLGSIO DC    X'00'              IOFLGS                                $$G01670
+.* BIT 0 OF $$FLGSIO ONE IF OUTPUT FILE OPENED.                         $$G01680
+.* BIT 1 OF $$FLGSIO ONE IF INPUT FILE OPENED.                          $$G01690
+.* BIT 2 OF $$FLGSIO ONE IF INPUT FILE EOF ENCOUNTERED.                 $$G01700
+         AIF   (&$$DOS).BUF       SKIP OS MACROS IF DOS                 $$G01710
+.* The List and Execute forms of the OPEN and CLOSE macros are          $$G01720
+.* used because they do not require addressability, as do the           $$G01730
+.* standard forms, which make regular use of implied addresses.         $$G01740
+$$PROPEN OPEN  ($$OUDCB,(OUTPUT)),MF=L  OPEN LIST FOR SYSPRINT          $$G01750
+$$RDOPEN OPEN  ($$INDCB,(INPUT)),MF=L   OPEN LIST FOR SYSIN             $$G01760
+$$PRCLOS CLOSE ($$OUDCB),MF=L     CLOSE LIST FOR SYSPRINT               $$G01770
+$$RDCLOS CLOSE ($$INDCB),MF=L     CLOSE LIST FOR SYSIN                  $$G01780
+.* Input and output DCBs. BLKSISE might be provided on DD statement.    $$G01790
+$$OUDCB  DCB   MACRF=PM,DSORG=PS,RECFM=FBA,EXLST=$$DCBXIT,             X$$G01800
+               LRECL=&$$PLL,DDNAME=&$$ONAM                              $$G01810
+$$INDCB  DCB   MACRF=GM,DSORG=PS,LRECL=80,RECFM=FB,                    X$$G01820
+               DDNAME=&$$INAM,EODAD=$$EOF,EXLST=$$DCBXIT                $$G01830
+         AGO   .BLANK                                                   $$G01840
+.BUF     ANOP                     DO DOS DEFINITIONS                    $$G01850
+$$ADDRI  DC    A($$INDCB)         ADDRESS OF INPUT DTF                  $$G01860
+$$ADDRO  DC    A($$OUDCB)         ADDRESS OF OUTPUT DTF                 $$G01870
+.* The use of X'5b' in the following two definitions is so that         $$G01880
+.* one can change all occurrences of '$$' to some other neutral         $$G01890
+.* characters without violating the DOS naming conventions for          $$G01900
+.* its open and close routines.                                         $$G01910
+$$OPEN   DC    2X'5B',CL6'BOPEN'  DOS OPEN ROUTINE NAME                 $$G01920
+$$CLOSE  DC    2X'5B',CL6'BCLOSE' DOS CLOSE ROUTINE NAME                $$G01930
+$$ASA    DC    C'CBA98765432+-10 '   VALID ASA CONTROL CHARS            $$G01940
+$$OUDCB  DTFPR CTLCHR=ASA,WORKA=YES,IOAREA1=$$IOAOU1,                  X$$G01950
+               IOAREA2=$$IOAOU2,DEVADDR=&$$ONAM,BLKSIZE=&$$PLL          $$G01960
+$$INDCB  DTFCD WORKA=YES,EOFADDR=$$EOF,IOAREA1=$$IOAIN1,               X$$G01970
+               IOAREA2=$$IOAIN2,BLKSIZE=80,DEVADDR=&$$INAM              $$G01980
+$$IOAIN1 DS    CL80               INPUT BUFFER 1                        $$G01990
+$$IOAIN2 DS    CL80               INPUT BUFFER 2                        $$G02000
+$$IOAOU1 DS    CL&$$PLL           OUTPUT BUFFER 1                       $$G02010
+$$IOAOU2 DS    CL&$$PLL           OUTPUT BUFFER 2                       $$G02020
+.BLANK   ANOP                                                           $$G02030
+$$MOVE   MVC   $$REGS+56-$$(8,13),0(14) COPY USER'S R14 & R15           $$G02040
+.* At this point R14 points to parameter list. R12 contains a code      $$G02050
+.* indicating which macro was called--0 means READCARD, 4 means         $$G02060
+.* PRINTLIN, and 8 means DUMPOUT or PRINTOUT ($$FLGS set also).         $$G02070
+.* R10 will contain a copy of R14, the first param address.             $$G02080
+.* R11 will point to the next param in the list.                        $$G02090
+.* $$EFADDR calculates the effective address from the halfword          $$G02100
+.* in the right half of R2 and returns it in R0 and R2.                 $$G02110
+         LR    11,14              COPY FIRST PARAM ADDRESS              $$G02120
+         LR    10,11              COPY FIRST PARAM ADDRESS              $$G02130
+.*                                SAVE CALLER'S CC VALUE                $$G02140
+         LR    0,10               COPY CALLER'S BALR 14 REG             $$G02150
+         SLL   0,2                DROP ILC                              $$G02160
+         SRL   0,30               KEEP ONLY CC                          $$G02170
+         STC   0,$$CCV-$$(0,13)   STORE IN CC= TEXT                     $$G02180
+         OI    $$CCV-$$(13),X'F0' MAKE A CHARACTER                      $$G02190
+         MVC   $$ACALL-$$(3,13),13(11) Save PO/DO/RC call address       $$G02200
+         LTR   12,12              CHECK FOR READCARD                    $$G02210
+         JZ    $$OPNRD            BRANCH IF READCARD to open input      $$G02220
+         JAS   7,$$OPNOUT         OPEN PRINTER                          $$G02230
+         B     *-$$(12,13)        Branch to processing routine          $$G02240
+         J     $$LINP             PRINTLIN                              $$G02250
+         J     $$PODO             PRINTOUT/DUMPOUT                      $$G02260
+         J     $$CVTO             CONVERTO                              $$G02270
+.*       J     $$CVTI             CONVERTI (follows immediately!)       $$G02280
+.*-------------------------------------------------------------------   $$G02290
+.* CONVERTI -- convert to 32 or 64 bit signed integer in GR             $$G02300
+.*-------------------------------------------------------------------   $$G02310
+.*State 0: validate register operand                                    $$G02320
+         LH    2,14(,11)          Get memory addressing halfword        $$G02330
+         JAS   7,$$EFADDR         Convert to an address                 $$G02340
+         LR    3,2                Pointer carried in R3                 $$G02350
+         LH    2,12(,11)          Get register addressing halfword      $$G02360
+         JAS   7,$$EFADDR         Convert to an address                 $$G02370
+         LA    11,16(,11)         Set return address                    $$G02380
+         CH    2,$$31-$$(,13)     Test register value                   $$G02390
+         JH    $$CVIER1           Value error if reg too big            $$G02400
+         LR    4,2                Carry register number in R4           $$G02410
+         MVI   $$CVIFlg-$$(13),0  Initialize flags                      $$G02420
+         TM    8(14),X'03'        Are there any exits?                  $$G02430
+         JZ    $$CVISt1           If no, nothing more to do             $$G02440
+         MVC   $$CVIFlg-$$(13),8(14) Copy byte with exit flag bits      $$G02450
+         NI    21(14),X'0F'       Reset ERR= branch mask to zero        $$G02460
+         NI    25(14),X'0F'       Reset STOP= branch mask to zero       $$G02470
+.*State 1: scan for non-blank: +, -, or digit                           $$G02480
+$$CVISt1 XR    2,2                Initial state                         $$G02490
+         TRT   0(1,3),$$CVITbl-$$(13)  Scan one character               $$G02500
+         LA    3,1(,3)            Step to next char                     $$G02510
+         LA    2,*+2-$$(2,13)     Address-4 of first branch             $$G02520
+         BR    2                  Branch per character type             $$G02530
+         J     $$CVIErC           Invalid character; error exit         $$G02540
+         J     $$CVISt1           Blank; repeat initial-state scan      $$G02550
+         J     $$CVIP             Plus                                  $$G02560
+         J     $$CVIM             Minus                                 $$G02570
+         J     $$CVIS1A           Digit                                 $$G02580
+$$CVIP   OI    $$CVIFlg-$$(13),X'C0'  Sign found, + value               $$G02590
+         ST    3,$$CVIASt-$$(,13) Save digit starting address           $$G02600
+         J     $$CVISt2           Now scan for digits                   $$G02610
+$$CVIM   OI    $$CVIFlg-$$(13),X'A0'  Sign found, - value               $$G02620
+         ST    3,$$CVIASt-$$(,13) Save digit starting address           $$G02630
+         J     $$CVISt2           Now scan for digits                   $$G02640
+$$CVIS1A OI    $$CVIFlg-$$(13),X'C0'  Set default + sign                $$G02650
+         LR    2,3                Copy pointer for digit start          $$G02660
+         BCTR  2,0                Back up to digit start address        $$G02670
+         ST    2,$$CVIASt-$$(,13) Save digit starting address           $$G02680
+         J     $$CVISt3           Now scan for more digits              $$G02690
+.*State 2: have a sign; scan for required digit; non-digit -> error     $$G02700
+$$CVISt2 XR    2,2                Clear GR2 for TRT                     $$G02710
+         TRT   0(1,3),$$CVITbl-$$(13)  Scan one character               $$G02720
+         LA    3,1(,3)            Step to next char                     $$G02730
+         LA    2,*+2-$$(2,13)     Address-4 of first branch             $$G02740
+         BR    2                  Branch per character type             $$G02750
+         J     $$CVIEr2           Invalid character                     $$G02760
+         J     $$CVIEr2           Blank = invalid char                  $$G02770
+         J     $$CVIEr2           +     = invalid char                  $$G02780
+         J     $$CVIEr2           -     = invalid char                  $$G02790
+         CLI   0(3),C'0'          Is next char less than C'0'?          $$G02800
+         JL    $$CVIS4C           If yes, scan is ended                 $$G02810
+         CLI   0(3),C'9'          Is it greater than C'9'?              $$G02820
+         JH    $$CVIS4C           If yes, scan ended, R3=A(stop char)   $$G02830
+.*State 3:  only digits allowed; everything else terminates scan        $$G02840
+$$CVISt3 XR    2,2                Clear GR2 for TRT                     $$G02850
+         TRT   0(1,3),$$CVITbl-$$(13)  Scan one character               $$G02860
+         LA    3,1(,3)            Step to next char                     $$G02870
+         LA    2,*+2-$$(2,13)     Address-4 of first branch             $$G02880
+         BR    2                  Branch per character type             $$G02890
+         J     $$CVIErC           Invalid char ends scan                $$G02900
+         J     $$CVISt4           Blank = non-digit char                $$G02910
+         J     $$CVISt4           +     = non-digit char                $$G02920
+         J     $$CVISt4           -     = non-digit char                $$G02930
+         J     $$CVISt3           Digit = repeat state 3                $$G02940
+.*State 4: remove leading 0s; save end addr, new start addr             $$G02950
+$$CVISt4 BCTR  3,0                Back up to stop character             $$G02960
+$$CVIS4C ST    3,$$CVIAEn-$$(,13) Save stop address for user's R1       $$G02970
+         LR    0,3                Copy end address                      $$G02980
+         BCTR  0,0                Back up to last digit                 $$G02990
+         L     2,$$CVIASt-$$(,13) Get starting address                  $$G03000
+$$CVIS4A CLI   0(2),C'0'          Check for leading zero                $$G03010
+         JNE   $$CVIS4B           Exit loop if nonzero                  $$G03020
+         CR    2,0                Is the number entirely zeros?         $$G03030
+         JNL   $$CVIS4B           Yes, have start of valid number       $$G03040
+         LA    2,1(,2)            Step to next digit                    $$G03050
+         J     $$CVIS4A           Repeat the scan                       $$G03060
+$$CVIS4B ST    2,$$CVIASt-$$(,13) Save significance start address       $$G03070
+         LR    1,2                Save start addr in GR1 for packing    $$G03080
+         SR    0,2                Last-first = (Number-1) of digits     $$G03090
+         LR    2,0                Save L-1 for packing and moving       $$G03100
+.*State 5:  check reg type vs. length of digit string                   $$G03110
+         CHI   2,18               More than 19 digits?                  $$G03120
+         JH    $$CVIEr1           Error if so                           $$G03130
+         CH    4,$$15-$$(,13)     Check for 32- bs 64-bit register      $$G03140
+         JH    $$CVISt6           Go process data for 64-bit reg        $$G03150
+         CHI   2,9                Check length of 32-bit data           $$G03160
+         JH    $$CVIEr1           Digit string too long, >10 digits     $$G03170
+         AHI   2,X'0070'          Include length 8 for the doubleword   $$G03180
+         STC   2,*+5-$$(,13)      Store L1,L2 in Pack instruction       $$G03190
+         PACK  $$DWORD-$$(8,13),0(*-*,1)   Pack up to 10 digits         $$G03200
+         CP    $$DWORD-$$(,13),$$CVIM32-$$(,13) Check vs. max 32        $$G03210
+         JL    $$CVIS5A           If smaller, go ahead and convert      $$G03220
+         JH    $$CVIEr1           Error if too big                      $$G03230
+         TM    $$CVIFlg-$$(13),X'C0'  Equals max; is sign positive?     $$G03240
+         JO    $$CVIEr1           Error if +max                         $$G03250
+         LA    0,1                Create max negative result            $$G03260
+         SLL   0,31               Have -2**31 in R0                     $$G03270
+         J     $$CVIV32           Go store and test 32-bit value        $$G03280
+$$CVIS5A CVB   0,$$DWORD-$$(,13)  Convert to binary                     $$G03290
+         TM    $$CVIFlg-$$(13),X'A0'  Was there a minus sign?           $$G03300
+         JNO   $$CVIV32           Skip if +                             $$G03310
+         LCR   0,0                Make the result negative              $$G03320
+$$CVIV32 SLL   4,2                Make a word index from reg value      $$G03330
+         ST    0,$$REGS-$$(4,13)  Store result in user's register       $$G03340
+         J     $$CVIRet           And return to caller                  $$G03350
+.*State 5:  Convert to 64-bit register                                  $$G03360
+$$CVISt6 XC    $$DWORD-$$(13),$$DWORD-$$(13) Clear high-order 8 bytes   $$G03370
+         STG   0,$$SAVG0-$$(,13)  Save user's GG0                       $$G03380
+         CH    2,$$15-$$(,13)     Check for 16 or more digits           $$G03390
+         JNL   $$CVIS6B           Go do 16 to 19 digits                 $$G03400
+         AHI   2,X'0070'          Simple case; set L1,L2 for pack       $$G03410
+         STC   2,*+5-$$(,13)      Set length fields                     $$G03420
+         PACK  $$DWORD+8-$$(,13),0(*-*,1) Pack 1-15 digits              $$G03430
+         CVBG  0,$$DWORD-$$(,13)  Convert to 64-bit binary              $$G03440
+         TM    $$CVIFlg-$$(13),X'20'  Was there a minus sign?           $$G03450
+         JNO   $$CVIV64           If not, prepare to deliver result     $$G03460
+         LCGR  0,0                                                      $$G03470
+         J     $$CVIV64           Go store result                       $$G03480
+$$CVIS6B LR    0,2                Copy length-1 for long number         $$G03490
+         AHI   0,-15              Length in R4 now 0-3 (16-19 digits)   $$G03500
+         LR    2,0                Save difference                       $$G03510
+         AHI   0,X'0030'          Add in length for pack                $$G03520
+         STC   0,*+5-$$(,13)      Store L1,L2 in pack instructin        $$G03530
+         PACK  $$XTemp-$$(*-*,13),0(*-*,1)  Pack 1 to 4 digits          $$G03540
+         SRP   $$XTemp-$$(13),1,0 Shift left once to eliminate sign     $$G03550
+         LA    1,1(1,2)           Address of remaining 15 digits        $$G03560
+         PACK  $$DWORD+8-$$(,13),0(15,1)  Pack remaining 15 digits      $$G03570
+         MVC   $$DWORD+5-$$(3,13),$$XTemp-$$(13) Copy 1-4 digits        $$G03580
+         CP    $$DWORD-$$(16,13),$$CVIM64-$$(13) Check digit magnitude  $$G03590
+         JH    $$CVIEr1           Error if too large                    $$G03600
+         JL    $$CVIS6C           If smaller, go ahead and convert      $$G03610
+         TM    $$CVIFlg-$$(13),X'C0' Max magnitude: was there a - sign? $$G03620
+         JO    $$CVIEr1           No, number too large by 1 bit         $$G03630
+         LA    0,1                Set up max negative value             $$G03640
+         SLLG  0,0,63             Now only a high-order bit in G0       $$G03650
+         J     $$CVIV64           Go store result                       $$G03660
+$$CVIS6C CVBG  0,$$DWORD-$$(,13)  Convert to 64-bit binary              $$G03670
+         TM    $$CVIFlg-$$(13),X'A0'  Was there a minus sign?           $$G03680
+         JNO   $$CVIV64           No, store result                      $$G03690
+         LCGR  0,0                Complement it                         $$G03700
+         J     $$CVIV64           Go store result                       $$G03710
+$$CVIV64 LTR   4,4                Is the user's reg zero?               $$G03720
+         JNZ   $$CVI64L           Jump if no, simpler case              $$G03730
+         ST    0,$$REGS-$$(,13)   Store low (GR0) half of GG0           $$G03740
+         J     $$CVIRet           No more to do; high half is set       $$G03750
+$$CVI64L LR    0,4                Copy register number                  $$G03760
+         SLL   4,4                Move reg number left 4 bits           $$G03770
+         OR    4,0                Now have X'rr' in R4                  $$G03780
+         STC   4,*+5-$$(,13)      Store in LMH instruction              $$G03790
+         LMH   *-*,*-*,$$DWORD-$$(13) Load high half of user's Greg     $$G03800
+         LR    1,0                User's reg number now in R1           $$G03810
+         SLL   1,2                Make a word index from it             $$G03820
+         L     0,$$DWORD+4-$$(,13) Get low half of 64-bit result        $$G03830
+         ST    0,$$Regs-$$(1,13)  Store low half in user's register     $$G03840
+         LG    0,$$SAVG0-$$(,13)  Restore GG0                           $$G03850
+         J     $$CVIRet           Return to caller                      $$G03860
+.*                                                                      $$G03870
+.* $$CVIErr BCTR  3,0                Invalid value, R3=A(stop char)     $$G03880
+$$CVIEr1 ST    3,$$CVIAEn-$$(,13) Store stop char address               $$G03890
+         TM    $$CVIFlg-$$(13),X'01' Is there an ERR= operand?          $$G03900
+         JZ    $$CVIErN           If not, don't set its branch mask     $$G03910
+         OI    21(10),X'F0'       Set ERR= return branch mask to F      $$G03920
+         J     $$CVIRet           Return to caller's ERR= address       $$G03930
+$$CVIErN MVC   $$OUTBUF+1-$$(L'$$CVIMN,13),$$CVIMN-$$(13)               $$G03940
+         JAS   7,$$OPNOUT         Make sure printer is opened           $$G03950
+         JAS   7,$$PUTLIN         Print the line                        $$G03960
+         J     $$TERM1            And terminate                         $$G03970
+.*                                                                      $$G03980
+$$CVIEr2 BCTR  3,0                Invalid char                          $$G03990
+$$CVIErC BCTR  3,0                Invalid data, R3=A(stop char)         $$G04000
+         ST    3,$$CVIAEn-$$(,13) Store stop char address               $$G04010
+         TM    $$CVIFlg-$$(13),X'02' Is there a STOP= operand?          $$G04020
+         JZ    $$CVIErX           If not, don't set its branch mask     $$G04030
+         OI    25(10),X'F0'       Set ERR= return branch mask to F      $$G04040
+         J     $$CVIRet           Return to caller's STOP= address      $$G04050
+$$CVIRet L     0,$$CVIAEn-$$(,13) Get address of stop character         $$G04060
+         ST    0,$$REGS-$$+4(,13) Store in GR1 slot                     $$G04070
+         J     $$RETURN           Return to caller                      $$G04080
+$$CVIErX MVC   $$OUTBUF+1-$$(L'$$CVIMC,13),$$CVIMC-$$(13)               $$G04090
+         JAS   7,$$OPNOUT         Make sure printer is opened           $$G04100
+         JAS   7,$$PUTLIN         Print the line                        $$G04110
+         J     $$TERM1            And terminate                         $$G04120
+.*-------------------------------------------------------------------   $$G04130
+.* CONVERTO -- convert 32 or 64 bit signed integer to characters        $$G04140
+.*-------------------------------------------------------------------   $$G04150
+$$CVTO   LH    2,12(,11)          Get register operand                  $$G04160
+         JAS   7,$$EFAddr         Convert to effective address          $$G04170
+         LR    9,2                Save                                  $$G04180
+         CHI   2,47               Check value                           $$G04190
+         JH    $$CVTX             Exit if too big, ignore the call      $$G04200
+         LH    2,14(,11)          Get storage address operand           $$G04210
+         JAS   7,$$EFAddr         Convert to effective address          $$G04220
+         CHI   9,15               Want a 4-byte GPR?                    $$G04230
+         JH    $$CVTOD            No, want either GGR or FPR            $$G04240
+         NILL  9,X'000F'          Mask off unwanted bits                $$G04250
+         SLL   9,2                Make index for load                   $$G04260
+         L     0,$$Regs-$$(9,13)  Get the user's register               $$G04270
+         ST    0,$$RData-$$(,13)  Store for conversion                  $$G04280
+         JAS   7,$$CVT4           Convert to a character string         $$G04290
+         MVC   0(L'$$Pat2,2),$$RCVT-$$(13)  Move to caller's area       $$G04300
+         J     $$CVTX             And return                            $$G04310
+*                                                                       $$G04320
+$$CVTOD  CHI   9,31               Want an 8-byte GPR?                   $$G04330
+         JH    $$CVTOF            No, must be a FPR                     $$G04340
+         NILL  9,X'000F'          Mask off unwanted bits                $$G04350
+         SLL   9,4                Make a register number                $$G04360
+         STC   9,*+5-$$(,13)      Store in STG                          $$G04370
+         STG   *-*,$$RData-$$(,13) Store high half of user's GGR        $$G04380
+         SRL   9,2                Make a word index                     $$G04390
+         L     0,$$Regs-$$(9,13)  Get low half of user's register       $$G04400
+         ST    0,$$RData+4-$$(,13)  Store low half for conversion       $$G04410
+         JAS   7,$$CVT8           Convert to characters                 $$G04420
+         MVC   0(L'$$Pat3,2),$$RCVT-$$(13)  Move to caller's area       $$G04430
+         J     $$CVTX             And return                            $$G04440
+*                                                                       $$G04450
+$$CVTOF  MVC   0(3,2),$$XQUOTE+1-$$(13) Initialize first 3 chars        $$G04460
+         NILL  9,X'000F'          Mask off unwanted bits                $$G04470
+         SLL   9,4                Make a register number                $$G04480
+         STC   9,*+5-$$(,13)      Store in STD                          $$G04490
+         STD   *-*,$$RData-$$(,13) Store user's FPR                     $$G04500
+         UNPK  3(16,2),$$RData-$$(9,13) Convert to spread hex           $$G04510
+         UNPK  18(2,2),$$RData+7-$$(2,13) Convert to spread hex         $$G04520
+         TR    3(16,2),$$TRTAB-240-$$(13)   Translate to EBCDIC         $$G04530
+         MVI   19(2),C''''        Insert closing quote                  $$G04540
+*                                                                       $$G04550
+$$CVTX   LA    11,16(,11)         Set return address                    $$G04560
+         J     $$RETURN           Return to caller                      $$G04570
+.*-------------------------------------------------------------------   $$G04580
+.* PRINTOUT/DUMPOUT HEADER LINE                                         $$G04590
+.*-------------------------------------------------------------------   $$G04600
+$$PODO   MVC   $$FLG2-$$(1,13),12(11) Copy No-header bit                $$G04610
+         TM    12(11),1           TEST NO-HEADER BIT                    $$G04620
+         JO    $$NOHDR            SKIP HEADER IF SET                    $$G04630
+         MVC   $$OUTBUF+1-$$(L'$$PC,13),$$PC-$$(13) HEADER MSG          $$G04640
+         CLI   $$FLGS-$$(13),0    CHECK FOR PRINTOUT                    $$G04650
+         JE    *+10               BRANCH IF PRINTOUT                    $$G04660
+         MVC   $$OUTBUF+5-$$(5,13),$$DC-$$(13) OVERLAY WITH DUMP        $$G04670
+         MVC   $$DWORD-$$(3,13),13(11)   MOVE CALL ADDRESS              $$G04680
+         JAS   7,$$HEXCV          CONVERT TO HEX                        $$G04690
+         MVC   $$OUTBUF+L'$$PC+2-$$(6,13),$$DWORD-$$(13) TO LINE        $$G04700
+         LA    1,$$OUTBUF+L'$$PC+2+6-$$(,13) Do statement number        $$G04710
+         MVC   0(L'$$ST,1),$$ST-$$(13)  Move text                       $$G04720
+         LA    1,L'$$ST(,1)       Step output pointer                   $$G04730
+         L     0,16(,11)          Get statement number                  $$G04740
+         CVD   0,$$DWORD-$$(,13)  Convert to packed                     $$G04750
+         MVC   0(L'$$PAT4,1),$$PAT4-$$(13)  Move pattern to line        $$G04760
+         ED    0(L'$$PAT4,1),$$DWORD+5-$$(13)  Edit statement number    $$G04770
+         LA    1,L'$$PAT4(,1)     Step output pointer                   $$G04780
+         MVC   0(L'$$CC+1,1),$$CC-$$(13)  Move CC value                 $$G04790
+.*       MVC   $$OUTBUF+L'$$PC+8-$$(L'$$CC+1,13),$$CC-$$(13) CC VALUE   $$G04800
+         JAS   7,$$PUTLIN         PRINT CALLFROM MESSAGE                $$G04810
+$$NOHDR  CLI   $$FLGS-$$(13),1    CHECK FOR DUMPOUT                     $$G04820
+         JE    $$DUMP             GO PROCESS DUMP                       $$G04830
+.*-------------------------------------------------------------------   $$G04840
+.* PRINTOUT -- First, CHECK IF NULL PARAMETER LIST                      $$G04850
+.*-------------------------------------------------------------------   $$G04860
+         TM    12(11),X'F0'       FLAGS IF NO PARAMS                    $$G04870
+         LA    11,20(0,11)        ADDR NEXT PARM OR RET.                $$G04880
+         JO    $$RETURN           IF NO PARMS, RETURN                   $$G04890
+$$OUTLP  MVC   $$FLGS-$$(1,13),0(11)   COPY PARM FLAGS                  $$G04900
+         OC    0(2,11),0(11)      Check for null-last indicator         $$G04910
+         JNZ   $$STAR             Not null-last, check for *            $$G04920
+         LA    11,2(,11)          Step over indicator                   $$G04930
+         J     $$RETURN           And return to caller                  $$G04940
+$$STAR   TM    $$FLGS-$$(13),8    SEE IF PRINTOUT *                     $$G04950
+         JNO   $$GETADD           BRANCH IF NOT PRTO *                  $$G04960
+         TM    $$FLG2-$$(13),1    PRINTOUT * and no header?             $$G04970
+         JO    $$TERM             Yes, just terminate                   $$G04980
+         MVC   $$OUTBUF+2+L'$$EX-$$(L'$$PEND,13),$$PEND-$$(13)          $$G04990
+         J     $$TERM             AND GO TERMINATE                      $$G05000
+$$GETADD LH    2,2(,11)           ADDR HWORD PARAM.                     $$G05010
+         JAS   7,$$EFADDR         COMPUTE EFFECTIVE ADDR                $$G05020
+         MVC   $$OUTBUF+1-$$(L'$$GPR,13),$$GPR-$$(13) GPR MSG           $$G05030
+         MVC   $$OUTBUF+10-$$(L'$$XQUOTE,13),$$XQUOTE-$$(13)            $$G05040
+         LA    0,X'F'             Mask for register digit               $$G05050
+         NR    0,2                Mask off all but 4 bits               $$G05060
+         CVD   0,$$DWORD-$$(,13)  CONVERT REG NO TO DEC                 $$G05070
+         MVC   $$OUTBUF+4-$$(L'$$PAT1,13),$$PAT1-$$(13) SET UP          $$G05080
+         ED    $$OUTBUF+4-$$(L'$$PAT1,13),$$DWORD+6-$$(13) REGNO        $$G05090
+         CH    2,$$15-$$(,13)     SEE IF GPR                            $$G05100
+         JH    $$TSTGGR           IF NOT, TO NEXT TEST                  $$G05110
+.* KNOW WE ARE TO PRINT CONTENTS OF a 32-bit GPR                        $$G05120
+         SLL   2,2                Form word index                       $$G05130
+         LA    2,$$REGS-$$(2,13)  ADDRESS USERS REGISTER                $$G05140
+         MVC   $$RDATA-$$(4,13),0(2) Copy user's register contents      $$G05150
+*          ST    0,$$RDATA-$$(,13)  Save value                          $$G05160
+         LA    9,3                LENGTH-1 OF DATA                      $$G05170
+         JAS   7,$$PHEX           PRINT HEX                             $$G05180
+         MVI   2(3),C'='          Put = sign in output line             $$G05190
+         JAS   7,$$CVT4           Convert it                            $$G05200
+         MVC   3(L'$$PAT2,3),$$RCVT-$$(13)  Move result to output       $$G05210
+         J     $$PNPUT            Output the line                       $$G05220
+$$TSTGGR CH    2,$$31-$$(,13)     SEE IF 64-bit GPR                     $$G05230
+         JH    $$TSTFLT           IF NOT, TO NEXT TEST                  $$G05240
+.* Print contents of 64-bit General Register                            $$G05250
+         MVI   $$OUTBUF+2-$$(13),C'G'   Set msg to 'GGR'                $$G05260
+         LA    0,X'F'             Set mask                              $$G05270
+         NR    2,0                Clear high-order bits                 $$G05280
+         SLL   2,4                Shift register number left            $$G05290
+         STC   2,*+5-$$(,13)      Store in next instruction             $$G05300
+         STG   *-*,$$RDATA-$$(,13)  Store GGRn high half                $$G05310
+         SRL   2,2                Reposition register number            $$G05320
+         LA    2,$$REGS-$$(2,13)  Point to user's low half              $$G05330
+         MVC   $$RDATA+4-$$(4,13),0(2)  Move user's low order half      $$G05340
+         LA    2,$$RDATA-$$(,13)  Data to convert                       $$G05350
+         LA    9,7                Length-1                              $$G05360
+         JAS   7,$$PHEX           PRINT HEX                             $$G05370
+         MVI   2(3),C'='          Put = sign in output line             $$G05380
+         JAS   7,$$CVT8                                                 $$G05390
+         MVC   4(L'$$PAT3,3),$$RCVT-$$(13)   Move to output             $$G05400
+         J     $$PNPUT            Output the data                       $$G05410
+$$TSTFLT CH    2,$$47-$$(,13)     SEE IF FLPTR                          $$G05420
+         JH    $$ISSYM            IF NOT IS SYMBOL                      $$G05430
+.* KNOW IS FLOATING PT REG                                              $$G05440
+         MVI   $$OUTBUF+1-$$(13),C'F'   SET MSG TO 'FPR'                $$G05450
+         SLL   2,4                PREPARE FOR STD                       $$G05460
+         STC   2,*+5-$$(,13)      SELECT FLPTR                          $$G05470
+         STD   *-*,$$DWORD-$$(0,13) GET CONTENTS FLPTR                  $$G05480
+         LA    2,$$DWORD-$$(,13)  ADDR CONTENTS FOR PHEX                $$G05490
+         LA    9,7                LENGTH-1 OF DATA                      $$G05500
+         JAS   7,$$PHEX           PRINT HEX                             $$G05510
+         J     $$PNPUT            Output the data                       $$G05520
+$$ISSYM  MVC   $$OUTBUF+1-$$(8,13),4(11)   SYMBOL NAME TO BUFF.         $$G05530
+         TM    $$FLGS-$$(13),64   SEE IF DECIMAL                        $$G05540
+         JO    $$DEC              BRANCH IF DECIMAL                     $$G05550
+         SR    9,9                PREPARE FOR IC                        $$G05560
+         IC    9,1(,11)           GET LENGTH-1                          $$G05570
+         TM    $$FLGS-$$(13),32   TEST FOR HEX                          $$G05580
+         JNO   $$SYM2             BRANCH IF NOT HEX                     $$G05590
+         JAS   7,$$PHEX           Convert the data                      $$G05600
+         J     $$PNPUT            Output the data                       $$G05610
+$$SYM2   DC    0H                                                       $$G05620
+         MVI   $$OUTBUF+12-$$(13),C'C'   SET FOR CHARACTERS             $$G05630
+         STC   9,*+5-$$(,13)      STORE LENGTH INTO MVC                 $$G05640
+         MVC   $$OUTBUF+14-$$(*-*,13),0(2) MOVE CHARACTER DATA          $$G05650
+         LA    3,$$OUTBUF+15-$$(9,13)  Address of trailing quote        $$G05660
+         MVI   0(3),C''''         Put trailing quote                    $$G05670
+         J     $$PNPUT            Output the data                       $$G05680
+.* DECIMAL FULLWORD OR HALFWORD                                         $$G05690
+$$DEC    CLI   1(11),7            Check for FD data type                $$G05700
+         JE    $$DECD             Branch if yes, do long conversion     $$G05710
+         LH    3,0(0,2)           GET HALFWORD                          $$G05720
+         TM    $$FLGS-$$(13),1    SEE IF WANTED FULLWORD                $$G05730
+         JNO   *+8                IF NOT DON'T LOAD IT                  $$G05740
+         L     3,0(,2)            REALLY WANTED FULLWORD                $$G05750
+         ST    3,$$RDATA-$$(,13)  Store for conversion                  $$G05760
+         JAS   7,$$CVT4           Convert to characters                 $$G05770
+         MVC   $$OutBuf+11-$$(L'$$Pat2,13),$$RCVT-$$(13)                $$G05780
+         J     $$PNPUT            PRINT LINE                            $$G05790
+$$DECD   MVC   $$RDATA-$$(8,13),0(2)  Get the doubleword                $$G05800
+         JAS   7,$$CVT8           Convert to characters                 $$G05810
+         MVC   $$OutBuf+12-$$(L'$$Pat3,13),$$RCVT-$$(13)                $$G05820
+$$PNPUT  LA    11,12(,11)         POINT TO NEXT PARAMETER               $$G05830
+$$PUT    JAS   7,$$PUTLIN         PRINT LINE                            $$G05840
+         TM    $$FLGS-$$(13),128  SEE IF LAST PARAMETER                 $$G05850
+         JNO   $$OUTLP            LOOP IF NOT                           $$G05860
+$$RETURN STM   10,11,$$REGS+56-$$(13)   STORE PARM,RETURN ADDRS.        $$G05870
+         SPM   10                 RESET CALLER'S COND CODE              $$G05880
+         LM    0,15,$$REGS-$$(13) RESTORE REGS                          $$G05890
+.* At this point all but R14 & R15 of user are restored;                $$G05900
+.* R14 contains addr of parm list following the BALR, and               $$G05910
+.* R15 contains return addr.                                            $$G05920
+         BR    15                 RETURN TO USER                        $$G05930
+.*-------------------------------------------------------------------   $$G05940
+.* DUMPOUT                                                              $$G05950
+.*-------------------------------------------------------------------   $$G05960
+$$DUMP   LH    2,22(,11)          GET SECOND OPERAND                    $$G05970
+         JAS   7,$$EFADDR         SECOND EFFECTIVE ADDRESS              $$G05980
+         LR    9,2                SAVE FOR A WHILE                      $$G05990
+         LH    2,20(,11)          GET FIRST OPERAND                     $$G06000
+         JAS   7,$$EFADDR         FIRST EFFECTIVE ADDRESS               $$G06010
+         LA    11,24(,11)         SET RETURN ADDRESS NOW                $$G06020
+         CR    2,9                COMPARE START TO END                  $$G06030
+         JNH   *+10               SKIP SWAP IF OKAY                     $$G06040
+         LR    0,9                SWAP HIGH AND LOW BOUNDS              $$G06050
+         LR    9,2                2 HAS LOWER BOUND                     $$G06060
+         LR    2,0                AND R9 HAS UPPER BOUND                $$G06070
+         LA    8,4                SET INCREMENT                         $$G06080
+         LCR   1,8                COMPLEMENT FOR MASKING                $$G06090
+         NR    2,1                FORCE TO WORD BOUNDARY                $$G06100
+$$DUMPA  ST    2,$$DWORD-$$(,13)  STORE LINE-START ADDRESS              $$G06110
+         JAS   7,$$HEXCV          CONVERT TO HEX                        $$G06120
+         MVC   $$OUTBUF+1-$$(6,13),$$DWORD+2-$$(13) TO LINE             $$G06130
+         LA    1,$$OUTBUF+9-$$(,13)     SET LINE POINTER                $$G06140
+         MVI   $$OUTBUF+82-$$(13),C'*'  SET LEFT ASTERISK               $$G06150
+         MVC   $$OUTBUF+83-$$(32,13),0(2) MOVE EBCDIC CHARS             $$G06160
+         TR    $$OUTBUF+83-$$(32,13),$$DUMPTB-$$(13) XLATE              $$G06170
+         MVI   $$OUTBUF+115-$$(13),C'*' SET RIGHT ASTERISK              $$G06180
+         LA    0,8                SET INNER LOOP COUNT                  $$G06190
+$$DUMPB  MVC   $$DWORD-$$(4,13),0(2)   GET A WORD FROM CALLER           $$G06200
+         JAS   7,$$HEXCV          CONVERT TO HEX                        $$G06210
+         MVC   0(8,1),$$DWORD-$$(13)   TO PRINT LINE                    $$G06220
+         AR    2,8                INCREMENT FETCH ADDRESS               $$G06230
+         LA    1,9(,1)            AND LINE POINTER                      $$G06240
+         JCT   0,$$DUMPB          LOOP TILL LINE DONE                   $$G06250
+         JAS   7,$$PUTLIN         PRINT THE LINE                        $$G06260
+         CR    2,9                COMPARE LOWER TO UPPER                $$G06270
+         JNH   $$DUMPA            GO WORK ON NEXT LINE                  $$G06280
+         J     $$RETURN                                                 $$G06290
+.*-------------------------------------------------------------------   $$G06300
+.* PRINTLIN                                                             $$G06310
+.*-------------------------------------------------------------------   $$G06320
+$$LINP   LH    2,14(0,11)         ADDR. HWORD USER BUFFER               $$G06330
+         JAS   7,$$EFADDR         CALC. LINE LENGTH                     $$G06340
+         LA    4,&$$PLL           MAX LINE SIZE                         $$G06350
+         LTR   3,0                SEE IF CALC LENGTH ZERO               $$G06360
+         JZ    *+10               IF ZERO USE LEN=MAX                   $$G06370
+         CR    3,4                SEE IF LEN GT MAX                     $$G06380
+         JNH   *+6                IF NOT USE LEN                        $$G06390
+         LR    3,4                USE LEN=MAX                           $$G06400
+         LH    2,12(,11)          ADDR HWORD. USER BUFFER               $$G06410
+         JAS   7,$$EFADDR         CALC. EFFECT. ADDR.                   $$G06420
+         BCTR  3,0                LENGTH -1 FOR MVC                     $$G06430
+         STC   3,*+5-$$(,13)      STORE LENGTH INTO MVC                 $$G06440
+         MVC   $$OUTBUF-$$(0,13),0(2)   MOVE USER LINE TO BUFF          $$G06450
+         MVI   $$FLGS-$$(13),128  MARK AS LAST PARAM                    $$G06460
+         LA    11,16(,11)         RETURN ADDR                           $$G06470
+         AIF   (NOT &$$DOS).GOPUT SKIP ASA CODE IF NOT DOS              $$G06480
+         LA    2,L'$$ASA          GET LENGTH OF CHARACTERS              $$G06490
+         SR    0,0                USED FOR USER'S CONTROL               $$G06500
+         SR    1,1                FOR VALID CHARACTERS                  $$G06510
+         IC    0,$$OUTBUF-$$(,13) GET USER'S CONTROL CHAR               $$G06520
+         IC    1,$$ASA-1-$$(2,13) GET A VALID ASA CHAR                  $$G06530
+         CR    1,0                COMPARE IT TO USER'S                  $$G06540
+         JE    $$PUT              GO PRINT IF OKAY                      $$G06550
+         JCT   2,*-10             INDEX DOWN BY 1 IF BAD                $$G06560
+         MVI   $$OUTBUF-$$(13),C' '   FORCE BLANK IF BAD                $$G06570
+.GOPUT   J     $$PUT               PRINT LINE AND RETURN                $$G06580
+.*-------------------------------------------------------------------   $$G06590
+.* READCARD                                                             $$G06600
+.*-------------------------------------------------------------------   $$G06610
+$$OPNRD  TM    $$FLGSIO-$$(13),X'40'   SEE IF INPUT FILE OPEN           $$G06620
+         JO    $$INOPN            IF SO DON'T OPEN AGAIN                $$G06630
+         AIF   (&$$DOS).OPENRD    GO TO DOS OPEN CODE                   $$G06640
+*        OPEN  ($$INDCB,(INPUT))  OPEN INPUT FILE                       $$G06650
+         LA    1,$$RDOPEN-$$(,13) ADDR OF OPEN LIST                     $$G06660
+         OPEN  MF=(E,(1))         OPEN INPUT FILE                       $$G06670
+         AGO   .MARKRD            GO SET INPUT OPEN BIT                 $$G06680
+.OPENRD  ANOP                                                           $$G06690
+*        OPEN  $$INDCB            DOS OPEN MACRO                        $$G06700
+         LA    1,$$OPEN-$$(,13)   ADDR OF OPEN NAME                     $$G06710
+         LA    0,$$ADDRI-$$(,13)  ADDR OF INPUT DTF                     $$G06720
+         SVC   2                  DOS OPEN/CLOSE SVC                    $$G06730
+.MARKRD  OI    $$FLGSIO-$$(13),X'40'   INDICATE FILE OPENED             $$G06740
+$$INOPN  LA    11,18(,11)         DETERMINE RETURN ADDR.                $$G06750
+         TM    $$FLGSIO-$$(13),X'20'   SEE IF EOF ENCOUNTERED           $$G06760
+         JO    $$EOFERR           IF SO ERROR                           $$G06770
+         LH    2,16(,10)          ADDR. HWORD DATA AREA                 $$G06780
+         JAS   7,$$EFADDR         CALC. EFFECTIVE ADDR.                 $$G06790
+*        GET   $$INDCB,(0)        GET NEW CARD IMAGE                    $$G06800
+         LA    1,$$INDCB-$$(,13)  ADDRESS OF INPUT DCB                  $$G06810
+         GET   (1),(0)            GET NEW CARD IMAGE                    $$G06820
+         J     $$RETURN           RETURN TO CALLER                      $$G06830
+$$EOF    TM    8(10),X'80'        SEE IF CALLER EOF EXIT                $$G06840
+         JNO   $$EOFERR           IF NONE, ERROR                        $$G06850
+         OI    $$FLGSIO-$$(13),X'20'   MARK EOF FLAG                    $$G06860
+         OI    5(11),X'F0'        CH USER BC 0 TO BC 15                 $$G06870
+         J     $$RETURN           RETURN TO CALLER                      $$G06880
+$$EOFERR MVC   $$OUTBUF+2+L'$$EX-$$(L'$$REOF,13),$$REOF-$$(13)          $$G06890
+.*-------------------------------------------------------------------   $$G06900
+.* TERMINATE                                                            $$G06910
+.*-------------------------------------------------------------------   $$G06920
+$$TERM   TM    $$FLG2-$$(13),1    Check for no message                  $$G06930
+         JO    $$TERM1            Branch if none                        $$G06940
+         MVC   $$OUTBUF+1-$$(L'$$EX,13),$$EX-$$(13) FINIS MSG           $$G06950
+         MVC   $$OUTBUF+$$LOCP-$$(L'$$ATLOC,13),$$ATLOC-$$(13)          $$G06960
+         MVC   $$DWORD-$$(3,13),$$ACALL-$$(13)  Get call address        $$G06970
+         JAS   7,$$HEXCV          Convert to hex characters             $$G06980
+         MVC   $$OUTBUF+1+$$LOCP+L'$$ATLOC-$$(6,13),$$DWORD-$$(13)      $$G06990
+         JAS   7,$$PUTLIN         PRINT MESSAGE                         $$G07000
+         AIF   (&$$DOS).CLOSP     GO TO DOS CLOSE CODE                  $$G07010
+*        CLOSE ($$OUDCB)          CLOSE OUTPUT FILE                     $$G07020
+$$TERM1  LA    1,$$PRCLOS-$$(,13) ADDR OF CLOSE LIST                    $$G07030
+         CLOSE MF=(E,(1))         CLOSE OUTPUT FILE                     $$G07040
+         AGO   .CHKCLSR           GO TEST INPUT CLOSE                   $$G07050
+.CLOSP   ANOP                                                           $$G07060
+*        CLOSE $$OUDCB            CLOSE OUTPUT FILE                     $$G07070
+$$TERM1  LA    1,$$CLOSE-$$(,13)  SET ADDR OF ROUTINE NAME              $$G07080
+         LA    0,$$ADDRO-$$(,13)  ADDR OF OUTPUT DTF                    $$G07090
+         SVC   2                  DOS OPEN/CLOSE SVC                    $$G07100
+.CHKCLSR TM    $$FLGSIO-$$(13),X'40'   CHECK IF INPUT FILE OPEN         $$G07110
+         JNO   $$TERM2            IF NOT DON'T CLOSE                    $$G07120
+         AIF   (&$$DOS).CLOSR     GO TO DOS CLOSE CODE                  $$G07130
+*        CLOSE ($$INDCB)          CLOSE INPUT FILE                      $$G07140
+         LA    1,$$RDCLOS-$$(,13) ADDR OF CLOSE LIST                    $$G07150
+         CLOSE MF=(E,(1))         CLOSE INPUT FILE                      $$G07160
+         AGO   .TERM              GO TO TERMINATE CODE                  $$G07170
+.CLOSR   ANOP                                                           $$G07180
+*        CLOSE $$INDCB            DOS CLOSE MACRO                       $$G07190
+         LA    1,$$CLOSE-$$(,13)  ADDR OF CLOSE NAME                    $$G07200
+         LA    0,$$ADDRI-$$(,13)  ADDR OF INPUT DTF                     $$G07210
+         SVC   2                  DOS OPEN/CLOSE SVC                    $$G07220
+.TERM    ANOP                                                           $$G07230
+$$TERM2  MVI   $$FLGSIO-$$(13),0  CLEAR IO FLAGS                        $$G07240
+         AIF   (&$$DOS).EOJ       SKIP TO DOS EXIT                      $$G07250
+         SR    15,15              SET OS RETURN CODE TO 0               $$G07260
+         SVC   3                  OS EXIT MACRO                         $$G07270
+         AGO   .PUTL              AND GO ON WITH CODE                   $$G07280
+.EOJ     EOJ                                                            $$G07290
+.PUTL    ANOP                                                           $$G07300
+.*-------------------------------------------------------------------   $$G07310
+.* INTERNAL SUBROUTINES                                                 $$G07320
+.*-------------------------------------------------------------------   $$G07330
+.* Length-1 is in R9, source address is in R2, target address in R3.    $$G07340
+$$PHEX   LA    3,$$OUTBUF+14-$$(,13)   ADDRESS FOR HEX DIGIT            $$G07350
+         LA    8,1(0,9)           NUMBER OF BYTES                       $$G07360
+         AR    9,8                NUMBER OF HEX DIGITS -1               $$G07370
+         UNPK  0(3,3),0(2,2)      SPREAD HEX DIGITS                     $$G07380
+         LA    3,2(,3)            INC. LINE POINTER                     $$G07390
+         LA    2,1(,2)            INCREMENT SOURCE PTR                  $$G07400
+         JCT   8,*-14             LOOP IF MORE BYTES                    $$G07410
+         STC   9,*+5-$$(,13)      STORE LENGTH INTO TR                  $$G07420
+         TR    $$OUTBUF+14-$$(*-*,13),$$TRTAB-240-$$(13)                $$G07430
+         LA    3,$$OUTBUF+15-$$(9,13)   ADDR. NEXT PRINT POS.           $$G07440
+         MVI   0(3),C''''         CLOSING QUOTE MARK                    $$G07450
+         BR    7                  Return to caller                      $$G07460
+.*                                                                      $$G07470
+$$CVT4   L     0,$$RDATA-$$(,13)  Get 32-bit binary integer             $$G07480
+         CVD   0,$$DWORD-$$(,13)  Convert to packed decimal             $$G07490
+         MVC   $$RCVT-$$(L'$$PAT2,13),$$PAT2-$$(13) move pattern        $$G07500
+         LA    1,$$RCVT+L'$$PAT2-1-$$(,13) Possible sign position       $$G07510
+         EDMK  $$RCVT-$$(L'$$PAT2,13),$$DWORD+2-$$(13) Edit it          $$G07520
+         BNMR  7                  Return if not -                       $$G07530
+         BCTR  1,0                Back up                               $$G07540
+         MVI   0(1),C'-'          Set - sign                            $$G07550
+         BR    7                  Return                                $$G07560
+.*                                                                      $$G07570
+$$CVT8   STG   0,$$SAVG0-$$(,13)  Save GGR0 (changed by CVDG)           $$G07580
+         LG    0,$$RDATA-$$(,13)  Get 64-bit binary integer             $$G07590
+         CVDG  0,$$DWORD-$$(,13)  Convert to packed decimal             $$G07600
+         LG    0,$$SAVG0-$$(,13)  Restore user's GGR0 (used by CVDG)    $$G07610
+         MVC   $$RCVT-$$(L'$$PAT3,13),$$PAT3-$$(13) move pattern        $$G07620
+         LA    1,$$RCVT+L'$$PAT3-1-$$(,13) Possible sign position       $$G07630
+         EDMK  $$RCVT-$$(L'$$PAT3,13),$$DWORD+6-$$(13) Edit it          $$G07640
+         BNMR  7                  Return if not -                       $$G07650
+         BCTR  1,0                Back up                               $$G07660
+         MVI   0(1),C'-'          Set - sign                            $$G07670
+         BR    7                  Return                                $$G07680
+.*                                                                      $$G07690
+$$EFADDR LA    0,X'FFF'           DISPLACEMENT MASK                     $$G07700
+         NR    0,2                DISPLACEMENT IN R0                    $$G07710
+         N     2,$$F000-$$(,13)   CALC WHICH BASE REG.                  $$G07720
+         JZ    *+16               RETURN IF BASE = 0                    $$G07730
+         SRL   2,10               BASE REG NO. AS INDEX                 $$G07740
+         AL    0,$$REGS-$$(2,13)  FORM EFFECTIVE ADDR.                  $$G07750
+         N     0,$$FFF-$$(,13)    MASK OFF HIGH-ORDER BYTE              $$G07760
+         LR    2,0                RESULT IN R2 ALSO                     $$G07770
+         BR    7                  RETURN                                $$G07780
+.*                                                                      $$G07790
+$$OPNOUT TM    $$FLGSIO-$$(13),X'80'   IS OUTPUT FILE OPEN              $$G07800
+         BCR   7,7                RETURN NOW IF YES                     $$G07810
+         OI    $$FLGSIO-$$(13),X'80'   OUTPUT FILE BEING OPENED         $$G07820
+         AIF   (&$$DOS).OPENP     DIFFERENT CODE FOR DOS                $$G07830
+*        OPEN  ($$OUDCB,(OUTPUT)) OPEN OUTPUT FILE                      $$G07840
+         LA    1,$$PROPEN-$$(,13) ADDR OF OPEN LIST                     $$G07850
+         OPEN  MF=(E,(1))         OPEN OUTPUT FILE                      $$G07860
+         AGO   .CLEAR             GO FINISH OPEN                        $$G07870
+.OPENP   ANOP                                                           $$G07880
+*        OPEN  $$OUDCB            DOS OPEN MACRO                        $$G07890
+         LA    1,$$OPEN-$$(,13)   ADDRESS OF ROUTINE NAME               $$G07900
+         LA    0,$$ADDRO-$$(,13)  ADDRESS OF DTF POINTER                $$G07910
+         SVC   2                  DOS OPEN/CLOSE SVC                    $$G07920
+.CLEAR   BR    7                  RETURN TO CALLER                      $$G07930
+.*                                                                      $$G07940
+$$PUTLIN LA    1,$$OUDCB-$$(,13)  ADDRESS OF OUTPUT DCB                 $$G07950
+         LA    0,$$OUTBUF-$$(,13) ADDRESS OF OUTPUT BUFFER              $$G07960
+         PUT   (1),(0)            PRINT THE LINE                        $$G07970
+         MVC   $$OUTBUF-$$(&$$PLL,13),$$OUTBUF-$$-1(13) CLEAR           $$G07980
+         BR    7                  RETURN TO CALLER                      $$G07990
+$$HEXCV  UNPK  $$DWORD-$$(9,13),$$DWORD-$$(5,13) UNPACK 4 BYTES         $$G08000
+         TR    $$DWORD-$$(8,13),$$TRTAB-240-$$(13) TO EBCDIC            $$G08010
+         BR    7                  RETURN TO CALLER                      $$G08020
+.*-------------------------------------------------------------------   $$G08030
+         AIF   ('&SYSSTYP'eq '').NoSect                                 $$G08040
+&$$CSnam &$$CSTyp                 RESTORE ORIGINAL SECTION              $$G08050
+.NoSect  Pop   Print              Restore PRINT status                  $$G08060
+         MEnd  ,                  End of $$GENIO macro                  $$G08070
+

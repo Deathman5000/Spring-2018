@@ -1,0 +1,182 @@
+--------------------------AndroidManifest.xml-----------------------------------------------
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.jh949711.mapapp">
+    <!--
+         The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
+         Google Maps Android API v2, but you must specify either coarse or fine
+         location permissions for the 'MyLocation' functionality. 
+    -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <!--
+             The API key for Google Maps-based APIs is defined as a string resource.
+             (See the file "res/values/google_maps_api.xml").
+             Note that the API key is linked to the encryption key used to sign the APK.
+             You need a different API key for each encryption key, including the release key that is used to
+             sign the APK for publishing.
+             You can define the keys for the debug and release targets in src/debug/ and src/release/. 
+        -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBbLt85hTWaq_jIzd5EY1Dj9yzTMXRkzIE" />
+
+        <activity
+            android:name=".MapsActivity"
+            android:label="@string/title_activity_maps">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+
+--------------------------activity_main.xml-----------------------------------------------
+<LinearLayout
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+        <Button
+            android:layout_width="127dp"
+            android:layout_height="wrap_content"
+            android:text="map"
+            android:onClick="mapStreet"/>
+        <Button
+            android:layout_width="127dp"
+            android:layout_height="wrap_content"
+            android:text="satellite"
+            android:onClick="satellite"/>
+        <Button
+            android:layout_width="127dp"
+            android:layout_height="wrap_content"
+            android:text="hybrid"
+            android:onClick="hybrid"/>
+    </LinearLayout>
+    <fragment
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:map="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:context="com.example.jh949711.mapapp.MainActivity"/>
+
+</LinearLayout>
+
+--------------------------MainActivity.java-----------------------------------------------
+
+package com.example.jh949711.mapapp;
+/*
+    This app shows on google maps where the empire state building is in streetView, Satellite,
+    and Hybrid view.
+    Author: James Hund
+    Version: 04/25/18
+ */
+
+import android.support.v4.app.FragmentActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
+
+    private GoogleMap mMap;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+    }
+
+
+    /**
+     * Manipulates the map once available.
+     * This callback is triggered when the map is ready to be used.
+     * This is where we can add markers or lines, add listeners or move the camera. In this case,
+     * we just add a marker near Sydney, Australia.
+     * If Google Play services is not installed on the device, the user will be prompted to install
+     * it inside the SupportMapFragment. This method will only be triggered once the user has
+     * installed Google Play services and returned to the app.
+     */
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        LatLng empireState = new LatLng(40.7485413,-73.9857577);
+        CameraPosition cameraPosition = CameraPosition.builder()
+                .target(empireState)
+                .zoom(17.0f)
+                .tilt(25)
+                .build();
+        mMap.addMarker(new MarkerOptions().position(empireState).title("Empire State Building"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(empireState));
+    }
+    public void mapStreet(View view){
+        mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+    }
+    public void satellite(View view){
+        mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+    }
+    public void hybrid(View view){
+        mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+    }
+}
+
+
+
+--------------------------Logcat-----------------------------------------------
+
+04-25 14:19:40.657 15104-15104/? I/zygote: Not late-enabling -Xcheck:jni (already on)
+04-25 14:19:40.670 15104-15104/? W/zygote: Unexpected CPU variant for X86 using defaults: x86
+04-25 14:19:40.907 15104-15104/com.example.jh949711.mapapp I/MultiDex: VM with version 2.1.0 has multidex support
+04-25 14:19:40.907 15104-15104/com.example.jh949711.mapapp I/MultiDex: Installing application
+04-25 14:19:40.907 15104-15104/com.example.jh949711.mapapp I/MultiDex: VM has multidex support, MultiDex support library is disabled.
+04-25 14:19:40.916 15104-15104/com.example.jh949711.mapapp I/FirebaseInitProvider: FirebaseApp initialization unsuccessful
+04-25 14:19:41.081 15104-15104/com.example.jh949711.mapapp I/zzai: Making Creator dynamically
+04-25 14:19:41.163 15104-15104/com.example.jh949711.mapapp W/zygote: Skipping duplicate class check due to unrecognized classloader
+04-25 14:19:41.171 15104-15104/com.example.jh949711.mapapp I/Google Maps Android API: Google Play services client version: 10298000
+04-25 14:19:41.173 15104-15104/com.example.jh949711.mapapp I/Google Maps Android API: Google Play services package version: 11947470
+04-25 14:19:41.332 15104-15132/com.example.jh949711.mapapp D/NetworkSecurityConfig: No Network Security Config specified, using platform default
+04-25 14:19:41.337 15104-15158/com.example.jh949711.mapapp D/OpenGLRenderer: HWUI GL Pipeline
+04-25 14:19:41.340 15104-15109/com.example.jh949711.mapapp I/zygote: Do partial code cache collection, code=30KB, data=28KB
+04-25 14:19:41.341 15104-15109/com.example.jh949711.mapapp I/zygote: After code cache collection, code=30KB, data=28KB
+04-25 14:19:41.341 15104-15109/com.example.jh949711.mapapp I/zygote: Increasing code cache capacity to 128KB
+04-25 14:19:41.358 15104-15158/com.example.jh949711.mapapp I/OpenGLRenderer: Initialized EGL, version 1.4
+04-25 14:19:41.358 15104-15158/com.example.jh949711.mapapp D/OpenGLRenderer: Swap behavior 1
+04-25 14:19:41.586 15104-15154/com.example.jh949711.mapapp D/gralloc_ranchu: Emulator without host-side GPU emulation detected. Loading gralloc.default.so from /vendor/lib/hw/gralloc.default.so...
+04-25 14:19:43.342 15104-15156/com.example.jh949711.mapapp W/DynamiteModule: Local module descriptor class for com.google.android.gms.googlecertificates not found.
+04-25 14:19:43.365 15104-15156/com.example.jh949711.mapapp W/zygote: Skipping duplicate class check due to unrecognized classloader
+04-25 14:19:43.371 15104-15156/com.example.jh949711.mapapp I/DynamiteModule: Considering local module com.google.android.gms.googlecertificates:0 and remote module com.google.android.gms.googlecertificates:4
+04-25 14:19:43.371 15104-15156/com.example.jh949711.mapapp I/DynamiteModule: Selected remote version of com.google.android.gms.googlecertificates, version >= 4
+04-25 14:19:43.409 15104-15156/com.example.jh949711.mapapp W/zygote: Skipping duplicate class check due to unrecognized classloader
+
+
+

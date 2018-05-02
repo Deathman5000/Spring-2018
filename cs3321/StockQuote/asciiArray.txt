@@ -1,0 +1,96 @@
+char [] ascii = new char[128];
+ascii[32] = ' ';
+ascii[33] = '!';
+ascii[34] = '"';
+ascii[35] = '#';
+ascii[36] = '$';
+ascii[37] = '%';
+ascii[38] = '&';
+ascii[39] = '\'';
+40 	28 	  	( 	left parenthesis 	SA 	set attribute
+41 	29 	  	) 	right parenthesis 	  	 
+42 	2A 	  	* 	asterisk 	SM/SW 	set model switch
+43 	2B 	  	+ 	addition sign 	CSP 	control sequence prefix
+44 	2C 	  	, 	comma 	MFA 	modify field attribute
+45 	2D 	  	- 	subtraction sign 	ENQ 	enquiry
+46 	2E 	  	. 	period 	ACK 	acknowledge
+47 	2F 	  	/ 	right slash 	BEL 	bell
+48 	30 	  	0 	  	  	 
+49 	31 	  	1 	  	  	 
+50 	32 	  	2 	  	SYN 	synchronous idle
+51 	33 	  	3 	  	IR 	index return
+52 	34 	  	4 	  	PP 	presentation position
+53 	35 	  	5 	  	TRN 	 
+54 	36 	  	6 	  	NBS 	numeric backspace
+55 	37 	  	7 	  	EOT 	end of transmission
+56 	38 	  	8 	  	SBS 	subscript
+57 	39 	  	9 	  	IT 	indent tab
+58 	3A 	  	: 	colon 	RFF 	required form feed
+59 	3B 	  	; 	semicolon 	CU3 	customer use 3
+60 	3C 	  	< 	less than 	DC4 	device control 4
+61 	3D 	  	= 	equal 	NAK 	negative acknowledge
+62 	3E 	  	> 	greater than 	  	 
+63 	3F 	  	? 	question mark 	SUB 	substitute
+64 	40 	  	@ 	at symbol 	SP 	space
+65 	41 	  	A 	  	  	 
+66 	42 	  	B 	  	  	 
+67 	43 	  	C 	  	  	 
+68 	44 	  	D 	  	  	 
+69 	45 	  	E 	  	  	 
+70 	46 	  	F 	  	  	 
+71 	47 	  	G 	  	  	 
+72 	48 	  	H 	  	  	 
+73 	49 	  	I 	  	  	 
+74 	4A 	  	J 	  	¢ 	cent
+75 	4B 	  	K 	  	. 	period
+76 	4C 	  	L 	  	< 	less than
+77 	4D 	  	M 	  	( 	left parenthesis
+78 	4E 	  	N 	  	+ 	addition sign
+79 	4F 	  	O 	  	| 	logical or
+80 	50 	  	P 	  	& 	ampersand
+81 	51 	  	Q 	  	  	 
+82 	52 	  	R 	  	  	 
+83 	53 	  	S 	  	  	 
+84 	54 	  	T 	  	  	 
+85 	55 	  	U 	  	  	 
+86 	56 	  	V 	  	  	 
+87 	57 	  	W 	  	  	 
+88 	58 	  	X 	  	  	 
+89 	59 	  	Y 	  	  	 
+90 	5A 	  	Z 	  	! 	exclamation mark
+91 	5B 	  	[ 	left bracket 	$ 	dollar sign
+92 	5C 	  	\ 	left slash 	* 	asterisk
+93 	5D 	  	] 	right bracket 	) 	right parenthesis
+94 	5E 	  	^ 	hat, circumflex 	; 	semicolon
+95 	5F 	  	_ 	underscore 	¬ 	logical not
+96 	60 	  	ˋ 	grave 	- 	subtraction sign
+97 	61 	  	a 	  	/ 	right slash
+98 	62 	  	b 	  	  	 
+99 	63 	  	c 	  	  	 
+100 	64 	  	d 	  	  	 
+101 	65 	  	e 	  	  	 
+102 	66 	  	f 	  	  	 
+103 	67 	  	g 	  	  	 
+104 	68 	  	h 	  	  	 
+105 	69 	  	i 	  	  	 
+106 	6A 	  	j 	  	| 	split vertical bar
+107 	6B 	  	k 	  	, 	comma
+108 	6C 	  	l 	  	% 	percent sign
+109 	6D 	  	m 	  	_ 	underscore
+110 	6E 	  	n 	  	> 	greater than
+111 	6F 	  	o 	  	? 	question mark
+112 	70 	  	p 	  	  	 
+113 	71 	  	q 	  	  	 
+114 	72 	  	r 	  	  	 
+115 	73 	  	s 	  	  	 
+116 	74 	  	t 	  	  	 
+117 	75 	  	u 	  	  	 
+118 	76 	  	v 	  	  	 
+119 	77 	  	w 	  	  	 
+120 	78 	  	x 	  	  	 
+121 	79 	  	y 	  	ˋ 	grave
+122 	7A 	  	z 	  	: 	colon
+123 	7B 	  	{ 	left brace 	# 	numbersign
+124 	7C 	  	| 	logical or 	@ 	at symbol
+125 	7D 	  	} 	right brace 	' 	apostrophe
+126 	7E 	  	~ 	similar, tilde 	= 	equal

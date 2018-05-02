@@ -1,0 +1,5 @@
+         MACRO
+&LAB     ADD2 &R1,&R2,&R3
+&LAB     LR &R1,&R2
+         AR &R1,&R3
+         MEND

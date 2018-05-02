@@ -1,0 +1,41 @@
+         MACRO                                                          DUM00010
+&LABEL   DUMPOUT &LOW,&HIGH,&HEADER=YES                                 DUM00020
+.***************************************************************        DUM00030
+.* This macro dumps out an area of memory between the addresses*        DUM00040
+.* specified by &LOW and &HIGH. The dump is in standard form,  *        DUM00050
+.* with eight words per line along with their EBCDIC character *        DUM00060
+.* format at the right end. The header, giving the location    *        DUM00070
+.* from which the macro was called, is optional.               *        DUM00080
+.***************************************************************        DUM00090
+.* Generated parameter list:                                            DUM00100
+.*       DC    2F'0'              For caller's R41,R15                  DUM00110
+.*       DC    V($$DMPOUT)                                              DUM00120
+.*       DC    AL1(flags),AL3(call_address)                             DUM00130
+.*       DC    A(calling statement number                               DUM00140
+.*       DC    S(low_dump_addr),S(high_dump_addr)                       DUM00150
+         LCLA   &HDR,&N           &HDR = 1 IF NO HEADER                 DUM00160
+         LCLC   &HDRC             HEADER                                DUM00170
+&N       SetA  &SYSSTMT           Save statement number                 DUM00180
+         AIF   ('&LABEL' EQ '').NL   SKIP LABEL DEFINITION              DUM00190
+&LABEL   DC   0H'0'               DEFINE MACRO NAME                     DUM00200
+.NL      AIF   ('&LOW' NE '').LOW  FIRST PARM IS THERE                  DUM00210
+         MNOTE 8,'No starting address. DUMPOUT ignored.'                DUM00220
+         MEXIT                                                          DUM00230
+.LOW     ANOP                                                           DUM00240
+$$DO&SYSNDX DC   0H'0'            DECLARE INTERNAL LABEL                DUM00250
+         CNOP  2,4                ALIGNMENT                             DUM00260
+         STM   14,15,*+10         SAVE R14 & R15                        DUM00270
+         L     15,*+14            ADDR DUMPOUT ROUTINE                  DUM00280
+         BALR  14,15              CALL                                  DUM00290
+&HDRC    SetC  Upper('&HEADER')   Force to upper case                   DUM00300
+         AIF   ('&HDRC' NE 'NO').NHDR SKIP IF A HEADER                  DUM00310
+&HDR     SETA  1                  SET TO IGNORE HEADER                  DUM00320
+.NHDR    DC   2F'0',V($$DMPOUT),AL1(&HDR),AL3($$DO&SYSNDX),A(&N-1)      DUM00330
+         AIF   ('&HIGH' EQ '').NOHIGH   NO HIGH PARM                    DUM00340
+         DC    S(&LOW),S(&HIGH) DUMPOUT ADDRESSES                       DUM00350
+         AGO   .FINIS                                                   DUM00360
+.NOHIGH  DC    2S(&LOW)             DUMPOUT ADDRESS                     DUM00370
+.FINIS   LM    14,15,0(14)        RESTORE REGISTERS                     DUM00380
+         $$GENIO                  GENERATE I/O SECTION                  DUM00390
+         MEND                                                           DUM00400
+

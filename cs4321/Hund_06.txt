@@ -1,0 +1,68 @@
+**********************************************************************
+*    An assembler program to find the number of steps
+*    needed to reduce a number N (positive number) to one
+*    using the given rules. They are:
+*    Rule 1: If N is odd replace N by 3 times N plus 1
+*    Rule 2: if N is even replace N by its half (replace N by N/2)
+*    Repeat the rules until the number reduces
+*    to 1 and report the number of times the rules were applied
+*    before reducing the number to 1 the first time.
+**********************************************************************
+         TITLE 'Author: James Hund Version: 3/30/16'
+HW6      START 0            FIRST LINE OF THE PROGRAM
+         PRINT NOGEN
+         BASR 15,0          ESTABLISH A BASE REGISTER
+         USING *,15         INFORM THE ASSEMBLER
+BEGIN    READCARD CARDOUT   READ A LINE
+         CONVERTI 4,X1      EXTRACT THE FIRST NUMBER INTO R2
+         SR 6,6             SET R6  TO 0
+         SR 5,5
+         ST 4,NUMBER
+         PRINTOUT NUMBER,HEADER=NO
+LOOP     SR 5,5
+         SR 4,4
+         L  4,NUMBER
+         SRA 4,1
+         C  5,=F'0'
+         BE  EVEN
+         BNE ODD
+EVEN     SR 5,5
+         SR 4,4
+         L  4,NUMBER
+         SRA 4,1
+         ST 4,NUMBER
+         L 2,COUNT
+         A 2,=F'1'
+         ST 2,COUNT
+         PRINTOUT MESSAGE,HEADER=NO
+         C 5,ONE
+         BH LOOP
+         BE END
+ODD      SR 5,5
+         SR 4,4
+         L  5,NUMBER
+         M  4,=F'3'
+         A  5,=F'1'
+         ST 5,NUMBER
+         L 2,COUNT
+         A 2,=F'1'
+         ST 2,COUNT
+         C 5,=F'1'
+         BH LOOP
+         BE END
+END      L 13,COUNT
+         ST 13,OUTPUT
+*         CONVERTO 13,OUTPUT
+         PRINTOUT OUTPUT,XOUT,*,HEADER=NO
+CARDOUT  DC 0CL80' '
+X1       DS CL5
+NUMBER   DS F
+ZERO     DC F'0'
+ONE      DC F'1'
+THREE    DC F'3'
+COUNT    DC F'0'
+OUTPUT   DS F
+XOUT     DC 0CL21
+         DC C'NUMBER OF STEPS'
+MESSAGE  DC CL11'GOT TO EVEN'
+         END   HW6

@@ -1,0 +1,28 @@
+         Macro                                                          CON00010
+&L       CONVERTO  &R,&A                                                CON00020
+.***************************************************************        CON00030
+.* This macro converts the value in the register operand to    *        CON00040
+.* a signed string of decimal characters, placing the result   *        CON00050
+.* in the second operand field. If the register operand is     *        CON00060
+.* between 32 and 47, the floating point register is converted *        CON00070
+.* to hexadecimal characters.                                  *        CON00080
+.*                                                             *        CON00090
+.* Generated parameter list:                                   *        CON00100
+.*       DC    2F'0'              For caller's R14,R15         *        CON00110
+.*       DC    V($$CNVRTO)                                     *        CON00120
+.*       DC    S(register),S(memory_address)                   *        CON00130
+.***************************************************************        CON00140
+         AIF   (N'&SysList eq 2).CVT1                                   CON00150
+.BadArg  MNote 8,'Invalid CONVERTO argument list.'                      CON00160
+         MExit ,                                                        CON00170
+.CVT1    AIF   ('&L' eq '').CVT2                                        CON00180
+&L       DC    0H'0'                                                    CON00190
+.CVT2    CNop  2,4                                                      CON00200
+         STM   14,15,*+10                                               CON00210
+         L     15,*+14                                                  CON00220
+         BALR  14,15                                                    CON00230
+         DC    2F'0',V($$CNVRTO),S(&R),S(&A)                            CON00240
+         LM    14,15,0(14)                                              CON00250
+         $$GENIO                                                        CON00260
+         MEnd                                                           CON00270
+

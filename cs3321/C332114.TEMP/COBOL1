@@ -1,0 +1,64 @@
+      **********************************************************************
+      * A SIMPLE COBOL PROGRAM TO WRITE OUTPUT TO THE OUT STREAM           *
+      * USING THE DISPLAY COMMAND                                          *
+      * SOURCE CODE: C332114.TEMP(COBOL1)                                  *
+      * JCL : C332114.JCL(COBOL1)                                          *
+      **********************************************************************
+      *
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID COBOL100.
+      *
+       ENVIRONMENT DIVISION.
+      *
+       INPUT-OUTPUT SECTION.
+      *
+       FILE-CONTROL.
+      *
+       DATA DIVISION.
+       FILE SECTION.
+      *
+       WORKING-STORAGE SECTION.
+       01 OUT-REC              PIC 9(3)V99.
+       01 UNIT-PRICE           PIC 9(3)V99.
+       01 ITEM-TAX             PIC 9(2)V999.
+       01 SALES-TAX            PIC 9V99.
+       01 TOTAL-PRICE          PIC 99V99.
+       01 OUT-TAX              PIC $Z9.99.
+       01 OUT-PRICE            PIC $Z9.99.
+       01 SUM-TOTAL            PIC 9(3)V99 VALUE ZERO.
+       01 SUM-TOTAL-OUT        PIC $$,$$$.99.
+      *
+       PROCEDURE DIVISION.
+      *
+       000-CALCULATE-PRICE.
+           DISPLAY "HELLO, WELCOME TO COBOL PROGRAMMING".
+           PERFORM 100-COMPUTE-TOTAL.
+           STOP RUN.
+      *
+       100-COMPUTE-TOTAL.
+           MOVE 89.99 TO UNIT-PRICE.
+           MOVE 0.085 TO ITEM-TAX.
+           COMPUTE SALES-TAX ROUNDED = UNIT-PRICE * ITEM-TAX.
+           COMPUTE TOTAL-PRICE = SALES-TAX + UNIT-PRICE.
+           MOVE SALES-TAX TO OUT-TAX.
+           MOVE UNIT-PRICE TO OUT-PRICE.
+           DISPLAY "AMOUNT =      " OUT-PRICE.
+           MOVE TOTAL-PRICE TO OUT-PRICE.
+           DISPLAY "TAX =         " OUT-TAX.
+           DISPLAY "TOTAL PRICE = " OUT-PRICE.
+           ADD TOTAL-PRICE TO SUM-TOTAL.
+      *
+           MOVE 1.99 TO UNIT-PRICE.
+           COMPUTE SALES-TAX ROUNDED = UNIT-PRICE * ITEM-TAX.
+           COMPUTE TOTAL-PRICE = SALES-TAX + UNIT-PRICE.
+           ADD TOTAL-PRICE TO SUM-TOTAL.
+           MOVE SALES-TAX TO OUT-TAX.
+           MOVE UNIT-PRICE TO OUT-PRICE.
+           MOVE UNIT-PRICE TO OUT-PRICE.
+           DISPLAY "AMOUNT =      " OUT-PRICE.
+           DISPLAY "TAX =         " OUT-TAX.
+           MOVE TOTAL-PRICE TO OUT-PRICE.
+           DISPLAY "TOTAL PRICE = " OUT-PRICE.
+           MOVE SUM-TOTAL TO SUM-TOTAL-OUT.
+           DISPLAY " "
+           DISPLAY "TOTAL =    " SUM-TOTAL-OUT.
