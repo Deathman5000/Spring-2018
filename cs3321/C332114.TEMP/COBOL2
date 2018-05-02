@@ -1,0 +1,58 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID COBOL200.
+      *
+      *  THIS PROGRAM ILLUSTRATES HOW TO READ RECORDS,
+      *  WORK WITH THE DATA IN THE RECORDS, AND WRITE RECORDS AS OUTPUT.
+      *  INPUT RECORD FORMAT: COLUMNS 1-35 NAME, COLUMNS 36-39
+      *  UNIT PRICE WITH IMPLIED DECIMAL AFTER THE SECOND COLUMN,
+      *  COLUMNS 40-42 QUANTITY AND 43-80 UNUSED.
+      *
+       ENVIRONMENT DIVISION.
+      *
+       INPUT-OUTPUT SECTION.
+      *
+       FILE-CONTROL.
+           SELECT CARD-IN   ASSIGN TO UT-S-INPUT.
+           SELECT CARD-OUT  ASSIGN TO UT-S-OUTPUT.
+      *
+       DATA DIVISION.
+       FILE SECTION.
+       FD CARD-OUT LABEL RECORDS ARE STANDARD RECORDING F.
+       01 DSK-RCD.
+          02 FILLER            PIC X(80).
+       FD CARD-IN LABEL RECORDS OMITTED RECORDING F.
+       01 CRD-REC.
+          02 NAME-IN           PIC X(35).
+          02 UNIT-PRICE        PIC 9(2)V99.
+          02 QTY-IN            PIC 9(3).
+          02 FILLER            PIC X(38) VALUE SPACE.
+      *
+       WORKING-STORAGE SECTION.
+       01 OUT-REC.
+          02 NAME-OUT          PIC X(35).
+          02 TOTAL-PRICE       PIC $Z,ZZ9.99.
+          02 FILLER            PIC X(36) VALUE SPACE.
+       01 OUT-TEMP-PRICE       PIC 9(5)V99.
+       01 EOF                  PIC X VALUE 'N'.
+      *
+       PROCEDURE DIVISION.
+       100-MAIN.
+           OPEN INPUT CARD-IN
+                OUTPUT CARD-OUT.
+           PERFORM 1000-RD-CRD-REC.
+           PERFORM 2000-PROCESS-IT
+               UNTIL EOF = 'Y'.
+           CLOSE CARD-IN
+                 CARD-OUT.
+           STOP RUN.
+      *
+       1000-RD-CRD-REC.
+           READ CARD-IN
+             AT END MOVE 'Y' TO EOF.
+
+       2000-PROCESS-IT.
+           COMPUTE OUT-TEMP-PRICE = UNIT-PRICE * QTY-IN.
+           MOVE OUT-TEMP-PRICE TO TOTAL-PRICE.
+           MOVE NAME-IN TO NAME-OUT.
+           WRITE DSK-RCD FROM OUT-REC.
+           PERFORM 1000-RD-CRD-REC.

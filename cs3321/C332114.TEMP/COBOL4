@@ -1,0 +1,71 @@
+      *
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID COBOL400.
+      *
+      * THIS PROGRAM WILL COMPUTE THE MONTHLY PAYMENT GIVEN A LOAN AMOUNT,
+      * INTEREST RATE (APR), AND NUMBER OF YEARS.
+      * FOR EXAMPLE AMOUNT = $10,000.00, APR = 4.99, YEARS = 5.
+      * MONTHLY PAYMENT = ?
+      * PAYMENT = AMOUNT *( I +I/((1+I)^N-1)), I = APR/100/12, N = YEARS*12
+      *
+
+       ENVIRONMENT DIVISION.
+      *
+       INPUT-OUTPUT SECTION.
+      *
+       FILE-CONTROL.
+      *
+       DATA DIVISION.
+       FILE SECTION.
+      *
+       WORKING-STORAGE SECTION.
+       01 PRINCIPAL          USAGE COMP-2.
+       01 APR                USAGE COMP-2.
+       01 RATE               USAGE COMP-2.
+       01 YEARS              USAGE COMP-2.
+       01 MONTHS             USAGE COMP-2.
+       01 TEMP               USAGE COMP-2.
+       01 AMOUNT             USAGE COMP-2.
+       01 PAYMENT-AMOUNT     PIC $$,$$$,$$9.99.
+       01 LOAN-AMOUNT        PIC $$,$$$,$$$,$$9.99.
+       01 INTEREST           PIC Z9.99.
+       01 TERM               PIC ZZ.
+       01 READ-LINE1.
+           05 TEMP1             PIC 99999999V99.
+           05 FILLER            PIC X(70) VALUE SPACE.
+       01 READ-LINE2.
+           05 TEMP2             PIC 9V99.
+           05 FILLER            PIC X(77) VALUE SPACE.
+       01 READ-LINE3.
+           05 TEMP3             PIC 999.
+           05 FILLER            PIC X(77) VALUE SPACE.
+      *
+       PROCEDURE DIVISION.
+      *
+       000-CALCULATE-PRICE.
+           PERFORM 100-PAYMENT-CALCULATION.
+           STOP RUN.
+      *
+       100-PAYMENT-CALCULATION.
+      *    READ FIRST LINE FROM INSTREAM
+           ACCEPT READ-LINE1 FROM SYSIN
+           MOVE TEMP1 TO PRINCIPAL
+      *    READ SECOND LINE FROM INSTREAM
+           ACCEPT READ-LINE2 FROM SYSIN
+           MOVE TEMP2 TO APR
+      *    READ THIRD LINE FROM INSTREA
+           ACCEPT READ-LINE3 FROM SYSIN
+           MOVE TEMP3 TO YEARS
+           COMPUTE MONTHS = YEARS * 12.
+           COMPUTE RATE = APR / 100.0 / 12.
+           COMPUTE AMOUNT = RATE + RATE / ((1 + RATE) ** MONTHS - 1).
+           COMPUTE AMOUNT = PRINCIPAL * AMOUNT.
+           MOVE AMOUNT TO PAYMENT-AMOUNT
+           MOVE PRINCIPAL TO LOAN-AMOUNT
+           MOVE APR TO INTEREST
+           MOVE YEARS TO TERM.
+      *
+           DISPLAY "LOAN AMOUNT =  " LOAN-AMOUNT.
+           DISPLAY "APR =                     " INTEREST "%".
+           DISPLAY "NUMBER OF YEARS  =            " TERM.
+           DISPLAY "MONTHLY PAYMENT  = " PAYMENT-AMOUNT.
